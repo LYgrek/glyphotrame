@@ -6,7 +6,7 @@ import { photoSource } from './source.js';
 import { getChars, ensureFont, measureDensity, buildLUT, computeGrid, drawGlyphs } from './chars.js';
 import { computeHalftone, drawHalftone } from './halftone.js';
 import { ONE, isVector, gradGeom, maskStops, maskCanvas, weightField, gradMasks } from './gradient.js';
-import { paintGlow, postFX } from './postfx.js';
+import { paintGlow, postFX, grainOffset } from './postfx.js';
 
 // Calcule la grille de l'effet. Rend { grid, ready } (ready = false si la police n'était pas
 // encore chargée : il faudra recalculer), ou null si isStale() devient vrai pendant l'attente.
@@ -18,6 +18,16 @@ export async function compute(state, src, isStale = () => false) {
   const dens = measureDensity(state, chars, ready);
   const lut = buildLUT(state, chars, dens);
   return { grid: computeGrid(state, src, chars, lut), ready };
+}
+
+// Vidéo : prépare le calcul une fois pour toutes les images (police chargée, densité des glyphes,
+// table des tons), puis rend une fonction source → grille, synchrone, identique à compute().
+export async function prepareCompute(state) {
+  if (state.effect === 'halftone') return (src) => computeHalftone(state, src);
+  const chars = getChars(state);
+  const ready = await ensureFont(state, chars);
+  const lut = buildLUT(state, chars, measureDensity(state, chars, ready));
+  return (src) => computeGrid(state, src, chars, lut);
 }
 
 export const drawEffect = (ctx, g, state) => g.kind === 'halftone' ? drawHalftone(ctx, g, state) : drawGlyphs(ctx, g, state);
@@ -80,7 +90,7 @@ export function draw(ctx, g, state, src, s, opaque, maxDim = 1400) {
     maskedLayer(ctx, state, W, H, m.glyph, (lc) => lc.drawImage(eff, 0, 0), maxDim);
     if (glow) maskedLayer(ctx, state, W, H, m.glyph, (lc) => paintGlow(lc, eff, s, W, H, state), maxDim, 'lighter');
   }
-  postFX(ctx, g, state, s, W, H, solid);
+  postFX(ctx, g, state, s, W, H, solid, grainOffset(state, src));
 }
 
 // Image d'origine à la taille du résultat (vue avant / après) ; détourée si le détourage est actif

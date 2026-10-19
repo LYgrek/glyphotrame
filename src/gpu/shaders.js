@@ -251,7 +251,7 @@ uniform sampler2D u_F; uniform vec2 u_Forigin; uniform vec2 u_Fsize;
 uniform vec2 u_origin; uniform vec2 u_size; uniform vec2 u_full;
 uniform float u_ca; uniform float u_grid; uniform vec2 u_pitch; uniform float u_lw;
 uniform float u_scan; uniform float u_scanP; uniform float u_vig;
-uniform float u_grain; uniform int u_solid; uniform float u_gscale; uniform sampler2D u_grainTex;
+uniform float u_grain; uniform int u_solid; uniform float u_gscale; uniform sampler2D u_grainTex; uniform vec2 u_grainOff;
 uniform int u_unpremul;
 out vec4 o;
 vec4 F(vec2 X) {
@@ -291,7 +291,7 @@ void main() {
     c.rgb *= 1.0 - clamp((length(X - u_full * 0.5) - 0.35 * R) / (0.65 * R), 0.0, 1.0) * u_vig;
   }
   if (u_grain > 0.0) {
-    float v = texture(u_grainTex, X / (256.0 * u_gscale)).r;
+    float v = texture(u_grainTex, X / (256.0 * u_gscale) + u_grainOff / 256.0).r;
     if (u_solid == 1) {
       // incrustation (overlay) sur fond plein
       vec3 cb = c.rgb;

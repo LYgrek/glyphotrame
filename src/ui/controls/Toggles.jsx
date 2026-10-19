@@ -1,8 +1,8 @@
 // Case à cocher avec texte
-export function Check({ checked, onChange, children, hidden }) {
+export function Check({ checked, onChange, children, hidden, disabled }) {
   return (
     <label className="check" hidden={hidden}>
-      <input type="checkbox" checked={checked} onChange={(e) => onChange(e.target.checked)} />
+      <input type="checkbox" checked={checked} disabled={disabled} onChange={(e) => onChange(e.target.checked)} />
       <span>{children}</span>
     </label>
   );

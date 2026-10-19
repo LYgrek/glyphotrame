@@ -1,6 +1,7 @@
 import { exportRaster, exportSVG, openSheet } from '../state/actions.js';
 import { openProject, saveProject } from '../state/project.js';
 import { useSession } from '../state/index.js';
+import { openVideoExport } from '../state/video-export.js';
 import './Header.css';
 
 const MARK = ['@', '%', ':', '#', '+', '.', '=', '-', ' '];
@@ -19,6 +20,7 @@ function ProjectGroup() {
 }
 
 export default function Header() {
+  const video = useSession('video');
   return (
     <header className="bar">
       <div className="brand">
@@ -35,6 +37,7 @@ export default function Header() {
           <button className="btn" type="button" onClick={() => exportRaster('png')}>PNG</button>
           <button className="btn" type="button" onClick={() => exportRaster('jpeg')}>JPEG</button>
           <button className="btn" type="button" onClick={exportSVG}>SVG</button>
+          {video && <button className="btn" type="button" onClick={openVideoExport} title="Exporter toute la vidéo avec l'effet (les autres exports portent sur l'image courante)">Vidéo…</button>}
           <button className="btn primary" id="exCode" type="button" onClick={openSheet}>&lt;/&gt; Code</button>
         </div>
       </div>

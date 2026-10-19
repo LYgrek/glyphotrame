@@ -30,6 +30,8 @@ pub struct InfosVideo {
     pub duree: f64,
     /// images par seconde (r_frame_rate)
     pub cadence: f64,
+    /// la même, sous forme exacte pour ffmpeg (« 30000/1001 »), vide si inconnue
+    pub cadence_exacte: String,
     /// nombre d'images (annoncé par le fichier, sinon durée × cadence)
     pub images: u64,
     /// rotation appliquée à l'affichage : 0, 90, 180 ou 270 degrés
@@ -93,11 +95,11 @@ pub fn analyser_ffprobe(json: &str) -> Result<InfosVideo, String> {
     if rotation == 90 || rotation == 270 {
         std::mem::swap(&mut l, &mut h);
     }
-    let cadence = [&video["r_frame_rate"], &video["avg_frame_rate"]]
+    let (cadence_exacte, cadence) = [&video["r_frame_rate"], &video["avg_frame_rate"]]
         .iter()
-        .filter_map(|c| c.as_str().map(rapport))
-        .find(|c| *c > 0.0 && c.is_finite())
-        .unwrap_or(0.0);
+        .filter_map(|c| c.as_str().map(|t| (t.trim().to_string(), rapport(t))))
+        .find(|(_, c)| *c > 0.0 && c.is_finite())
+        .unwrap_or_default();
     let duree = nombre(&v["format"]["duration"]).or_else(|| nombre(&video["duration"])).unwrap_or(0.0);
     let images = nombre(&video["nb_frames"]).map(|n| n as u64).filter(|n| *n > 0).unwrap_or((duree * cadence).round() as u64);
     Ok(InfosVideo {
@@ -105,6 +107,7 @@ pub fn analyser_ffprobe(json: &str) -> Result<InfosVideo, String> {
         hauteur: h,
         duree,
         cadence,
+        cadence_exacte,
         images,
         rotation: rotation as u32,
         son: flux.iter().any(|s| s["codec_type"] == "audio"),
@@ -212,7 +215,7 @@ async fn sonder(app: &tauri::AppHandle, chemin: &Path) -> Result<InfosVideo, Str
 #[derive(Default)]
 pub struct CacheInfos(Mutex<HashMap<PathBuf, (Option<SystemTime>, InfosVideo)>>);
 
-async fn sonder_cache(app: &tauri::AppHandle, cache: &CacheInfos, chemin: &Path) -> Result<InfosVideo, String> {
+pub(crate) async fn sonder_cache(app: &tauri::AppHandle, cache: &CacheInfos, chemin: &Path) -> Result<InfosVideo, String> {
     let date = std::fs::metadata(chemin).and_then(|m| m.modified()).ok();
     if let Some((d, infos)) = cache.0.lock().unwrap().get(chemin) {
         if *d == date {

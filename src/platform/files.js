@@ -182,3 +182,25 @@ export function onFileDrop({ enter, leave, drop }) {
     window.removeEventListener('drop', onDrop);
   };
 }
+
+/* ---------- Export vidéo ---------- */
+const VIDEO_FILTERS = {
+  mp4: { name: 'Vidéo MP4 (H.264)', extensions: ['mp4'] },
+  mov: { name: 'Vidéo MOV (ProRes 4444)', extensions: ['mov'] },
+  webm: { name: 'Vidéo WebM (VP9)', extensions: ['webm'] },
+  gif: { name: 'GIF animé', extensions: ['gif'] }
+};
+// destination d'un export vidéo : fichier (boîte Enregistrer), ou dossier pour une séquence PNG ; null si annulé
+export async function chooseVideoDestination(defaultPath, ext) {
+  if (!inTauri()) throw new Error("L'export vidéo n'est possible que dans l'application.");
+  if (ext === 'png') {
+    const dir = defaultPath.replace(/[\/][^\/]*$/, '');
+    return open({ title: 'Dossier où enregistrer les images PNG', directory: true, multiple: false, defaultPath: dir });
+  }
+  return save({ title: 'Exporter la vidéo', defaultPath, filters: [VIDEO_FILTERS[ext]] });
+}
+// montre le fichier dans l'explorateur
+export async function revealFile(path) {
+  const { revealItemInDir } = await import('@tauri-apps/plugin-opener');
+  return revealItemInDir(path);
+}

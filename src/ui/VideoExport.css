@@ -1,0 +1,24 @@
+/* Fenêtre « Exporter la vidéo » (même carte que la fenêtre Code) */
+.vexport-card{width:min(760px,100%);overflow:auto}
+.vex-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px 22px}
+.vex-grid .field:first-child{grid-column:1/-1}
+.vex-grid .seg{grid-template-columns:none;grid-auto-flow:column;grid-auto-columns:1fr}
+.vex-grid .seg.three{grid-auto-flow:column}
+.vex-grid select{width:100%}
+.vex-grid .seg button{display:flex;flex-direction:column;align-items:center;gap:2px}
+.vex-grid .seg button small{font:11px/1.2 var(--f-mono);font-variant-numeric:tabular-nums;opacity:.8}
+.vex-summary{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+@media (max-width:700px){.vex-grid{grid-template-columns:1fr}}
+
+/* Progression de l'export, en bas à droite */
+.vexport-status{position:fixed;right:20px;bottom:calc(20px + env(safe-area-inset-bottom,0px));z-index:15;width:min(360px,calc(100% - 32px));display:flex;flex-direction:column;gap:8px;padding:14px 16px;background:var(--panel);border:1px solid var(--line);border-radius:10px;box-shadow:0 20px 50px -20px var(--shadow);font-size:13px}
+.vexport-status .vrow{display:flex;justify-content:space-between;align-items:center;gap:10px;min-width:0}
+.vexport-status .vrow span{color:var(--muted);font:12px/1.4 var(--f-mono);font-variant-numeric:tabular-nums;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.vexport-status .vrow.end{justify-content:flex-end}
+.vexport-status progress{width:100%;height:6px;accent-color:var(--accent)}
+.vexport-status.error b{color:#b4531a}
+.vexport-status .hint{overflow-wrap:anywhere}
+.vex-grid .check:has(input:disabled){opacity:.5;cursor:default}
+.vexport-status.run .vrow span{white-space:normal;flex:1}
+/* au-dessus de la barre de lecture */
+body:has(.videobar) .vexport-status{bottom:calc(84px + env(safe-area-inset-bottom,0px))}

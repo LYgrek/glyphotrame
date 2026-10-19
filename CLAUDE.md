@@ -27,7 +27,7 @@ Commandes :
 - `powershell -ExecutionPolicy Bypass -File .\tools\get-ffmpeg.ps1` : télécharger ffmpeg et ffprobe dans `src-tauri/binaries/` (obligatoire avant de compiler)
 - `npm run tauri dev` : lancer l'application en mode développement
 - `npm run tauri build` : créer l'installateur (`src-tauri/target/release/bundle/`)
-- `npm test` : tests unitaires (format des projets, chemins) ; `cd src-tauri; cargo test` : tests Rust
+- `npm test` : tests unitaires (format des projets, chemins, grain animé, taille des exports vidéo) ; `cd src-tauri; cargo test` : tests Rust
 
 ## Architecture cible
 
@@ -43,6 +43,8 @@ src/
     project.js      projets : enregistrer, ouvrir, suivi des modifications
     project-format.js  format des fichiers de projet (.json), fonctions pures
     video.js        vidéo : ouvrir, image courante (source { kind: 'video', path, meta, time }), navigation, lecture, entrée / sortie, raccourcis
+    frame.js        vidéo : rendre une image avec des réglages figés (pixels RGBA) ; frame-size.js : dimensions paires
+    video-export.js vidéo : export (boucle lire → rendre → écrire, progression, annulation) ; export-options.js : réglages par défaut
   platform/     Tauri : boîtes de dialogue, lecture / écriture de fichiers, glisser-déposer ; paths.js : chemins relatifs ;
                 ffmpeg.js : appels aux commandes Rust de la vidéo
   engine/       moteur pur JavaScript, sans React, porté depuis la référence
@@ -72,9 +74,10 @@ src/
     controls/       curseur, boutons segmentés, cases, interrupteur, couleur
     panel/          colonne de réglages, une section par bloc, éditeur de courbe
     stage/          aperçu (vues, curseur avant-après), barre et gestes de la plume, barre de lecture vidéo
-    Header, CodeSheet, Toast
+    Header, CodeSheet, VideoExport (fenêtre d'export vidéo et progression), Toast
 src-tauri/      côté Rust : plugins dialog + fs + shell, commandes (lire_image, ffmpeg), configuration de la fenêtre
   src/video.rs    vidéo : infos (ffprobe), image à un instant, sessions de lecture continue (ffmpeg, RGBA brut) ; tests sur de vraies vidéos
+  src/export.rs   vidéo : export (ffmpeg décodeur → interface → ffmpeg encodeur, MP4 / ProRes / WebM / PNG / GIF, son) ; tests de la chaîne complète
   binaries/       ffmpeg / ffprobe (téléchargés par tools/get-ffmpeg.ps1, non versionnés)
 reference/      version HTML d'origine (ne pas modifier)
 tools/          bancs de comparaison (`npm run compare`, `compare:ui`, `compare:gpu`), hors application

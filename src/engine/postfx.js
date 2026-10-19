@@ -44,7 +44,15 @@ export function getGrainTile() {
   return (grainTile = c);
 }
 
-export function postFX(ctx, g, state, s, W, H, solid) {
+// Vidéo, « Grain animé » : décalage du motif du grain (en pixels du motif 256 × 256), tiré de l'instant
+// de l'image ; [0, 0] pour une image ou si l'option est coupée (grain figé).
+export function grainOffset(state, src) {
+  if (!state.fxGrainAnim || !src || src.kind !== 'video') return [0, 0];
+  const n = Math.round((src.time || 0) * 1000);
+  return [Math.floor(rnd(n, 1, 3) * 256), Math.floor(rnd(n, 2, 5) * 256)];
+}
+
+export function postFX(ctx, g, state, s, W, H, solid, grainOff = [0, 0]) {
   ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0);
   // aberration chromatique : rouge décalé d'un côté, vert + bleu de l'autre
   if (state.fxChroma > 0) {
@@ -82,7 +90,7 @@ export function postFX(ctx, g, state, s, W, H, solid) {
   }
   if (state.fxGrain > 0) {
     const pat = ctx.createPattern(getGrainTile(), 'repeat');
-    if (pat.setTransform) pat.setTransform(new DOMMatrix().scale(Math.max(1, s)));
+    if (pat.setTransform) pat.setTransform(new DOMMatrix().scale(Math.max(1, s)).translate(-grainOff[0], -grainOff[1]));
     ctx.globalCompositeOperation = solid ? 'overlay' : 'source-atop';
     ctx.globalAlpha = state.fxGrain / 100 * (solid ? 1 : 0.4);
     ctx.fillStyle = pat; ctx.fillRect(0, 0, W, H);

@@ -3,6 +3,7 @@
    - session  : l'état de l'interface (vue, pipette, outil plume, fenêtre Code, statistiques, message). */
 import { createStore, useStore } from './store.js';
 import { defaultSettings } from './defaults.js';
+import { defaultExportOptions } from './export-options.js';
 
 export const settings = createStore(defaultSettings());
 export const session = createStore({
@@ -24,6 +25,8 @@ export const session = createStore({
   // vidéo ouverte ({ meta } ou null), instant courant (s), lecture, points d'entrée / sortie (s), boucle,
   // images par seconde réellement affichées pendant la lecture
   video: null, vTime: 0, vPlaying: false, vIn: 0, vOut: 0, vLoop: false, vFps: 0,
+  // export vidéo : fenêtre des réglages, derniers réglages, progression ({ phase: run | done | error, … })
+  vExportOpen: false, vExportOpts: defaultExportOptions(), vExport: null,
   // rendu de l'aperçu et des exports PNG / JPEG : carte graphique (WebGL2) ou canvas 2D
   // (?rendu=canvas dans l'adresse force le canvas 2D, utilisé par le banc compare:ui)
   rendu: typeof location !== 'undefined' && new URLSearchParams(location.search).get('rendu') === 'canvas' ? 'canvas' : 'gpu',

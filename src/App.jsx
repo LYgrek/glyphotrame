@@ -10,6 +10,7 @@ import Header from './ui/Header.jsx';
 import Controls from './ui/panel/Controls.jsx';
 import Stage from './ui/stage/Stage.jsx';
 import CodeSheet from './ui/CodeSheet.jsx';
+import VideoExport from './ui/VideoExport.jsx';
 import Toast from './ui/Toast.jsx';
 import './App.css';
 
@@ -55,6 +56,7 @@ export default function App() {
         </main>
       </div>
       <CodeSheet />
+      <VideoExport />
       <Toast />
     </>
   );

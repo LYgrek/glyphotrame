@@ -6,7 +6,7 @@ import Slider from '../controls/Slider.jsx';
 import { Check } from '../controls/Toggles.jsx';
 
 export function ScreenFxSection() {
-  const sync = useSetting('fxGridSync');
+  const sync = useSetting('fxGridSync'), grainAnim = useSetting('fxGrainAnim'), video = useSession('video');
   return (
     <section className="group">
       <h2>Néon &amp; écran</h2>
@@ -22,6 +22,7 @@ export function ScreenFxSection() {
       <Slider k="fxScanGap" label="Écart des lignes" min={2} max={16} step={1} />
       <Slider k="fxChroma" label="Aberration chromatique" min={0} max={12} step={0.5} />
       <Slider k="fxGrain" label="Grain" min={0} max={100} step={1} />
+      <Check checked={grainAnim} onChange={(v) => setSettings({ fxGrainAnim: v })} hidden={!video}>Grain animé (change à chaque image de la vidéo)</Check>
       <Slider k="fxVig" label="Vignettage" min={0} max={100} step={1} />
       <button className="btn small" type="button" onClick={fxReset}>Retirer les effets d'écran</button>
     </section>

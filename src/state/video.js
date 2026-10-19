@@ -38,6 +38,8 @@ export const frameCount = () => (meta() ? Math.max(1, meta().images || Math.roun
 export const frameOf = (t) => Math.round(t * fps());
 const clampFrame = (n) => Math.max(0, Math.min(frameCount() - 1, Math.round(n)));
 const requestTime = (n) => Math.max(0, (n - 0.5) / fps());
+// plage entrée → sortie, en numéros d'images
+export const rangeFrames = () => [inFrame(), Math.max(inFrame(), outFrame())];
 const inFrame = () => clampFrame(frameOf(session.get().vIn));
 const outFrame = () => clampFrame(Math.min(frameOf(session.get().vOut), frameCount() - 1));
 
@@ -140,7 +142,7 @@ export const toggleLoop = () => session.set({ vLoop: !session.get().vLoop });
 // Espace : lecture / pause · ← → : image précédente / suivante (Maj : 10 images) · I / O : entrée / sortie · L : boucle.
 // Ignorés dans les champs de saisie, avec la fenêtre Code ouverte, et pour ← → quand la plume a un point sélectionné.
 export function onVideoKey(e) {
-  if (e.defaultPrevented || !session.get().video || session.get().sheetOpen || e.ctrlKey || e.metaKey || e.altKey) return;
+  if (e.defaultPrevented || !session.get().video || session.get().sheetOpen || session.get().vExportOpen || e.ctrlKey || e.metaKey || e.altKey) return;
   const t = e.target, tag = (t && t.tagName || '').toLowerCase();
   if (['input', 'textarea', 'select'].includes(tag) || (t && t.isContentEditable)) return;
   const k = e.key;

@@ -1,3 +1,4 @@
+mod export;
 mod video;
 
 use std::path::Path;
@@ -68,6 +69,7 @@ pub fn run() {
         .plugin(tauri_plugin_shell::init())
         .manage(video::CacheInfos::default())
         .manage(video::Lectures::default())
+        .manage(export::Exports::default())
         .invoke_handler(tauri::generate_handler![
             lire_image,
             version_ffmpeg,
@@ -75,7 +77,12 @@ pub fn run() {
             video::image_video,
             video::lecture_debut,
             video::lecture_image,
-            video::lecture_fin
+            video::lecture_fin,
+            export::export_debut,
+            export::export_lire_image,
+            export::export_ecrire_image,
+            export::export_fin,
+            export::export_annuler
         ])
         .run(tauri::generate_context!())
         .expect("erreur au lancement de l'application Tauri");

@@ -111,12 +111,11 @@ export class GpuRenderer {
     this.region(job, null, { x: 0, y: 0, w: W, h: H }, false);
   }
 
-  // export PNG / JPEG à state.scale, rendu par tuiles (avec marges pour la lueur et l'aberration)
-  renderBlob(g, state, src, type) {
-    const s = state.scale, opaque = type === 'jpeg';
+  // rendu complet à l'échelle s, par tuiles (avec marges pour la lueur et l'aberration) ;
+  // put(tuile, x, y, l, h) reçoit les pixels RGBA non prémultipliés, ligne du haut en premier
+  tiles(g, state, src, s, opaque, put) {
     const W = Math.max(1, Math.round(g.W * s)), H = Math.max(1, Math.round(g.H * s));
     const margin = Math.ceil((state.fxChroma > 0 ? state.fxChroma * s : 0) + (state.fxGlow > 0 ? 3 * state.fxGlowR * s + 8 : 0)) + 2;
-    const out = E.createCanvas(W, H), ctx = out.getContext('2d');
     const { gl } = this;
     for (let ty = 0; ty < H; ty += TILE) for (let tx = 0; tx < W; tx += TILE) {
       const core = { x: tx, y: ty, w: Math.min(TILE, W - tx), h: Math.min(TILE, H - ty) };
@@ -129,11 +128,31 @@ export class GpuRenderer {
       gl.bindFramebuffer(gl.FRAMEBUFFER, t.fbo);
       gl.readPixels(0, 0, core.w, core.h, gl.RGBA, gl.UNSIGNED_BYTE, px);
       // lignes de bas en haut → image de haut en bas
-      const img = new ImageData(core.w, core.h), row = core.w * 4;
-      for (let y = 0; y < core.h; y++) img.data.set(px.subarray((core.h - 1 - y) * row, (core.h - y) * row), y * row);
-      ctx.putImageData(img, tx, ty);
+      const img = new Uint8ClampedArray(core.w * core.h * 4), row = core.w * 4;
+      for (let y = 0; y < core.h; y++) img.set(px.subarray((core.h - 1 - y) * row, (core.h - y) * row), y * row);
+      put(img, tx, ty, core.w, core.h);
     }
+    return { W, H };
+  }
+
+  // export PNG / JPEG à state.scale
+  renderBlob(g, state, src, type) {
+    const s = state.scale, opaque = type === 'jpeg';
+    const out = E.createCanvas(Math.max(1, Math.round(g.W * s)), Math.max(1, Math.round(g.H * s))), ctx = out.getContext('2d');
+    this.tiles(g, state, src, s, opaque, (img, x, y, w, h) => ctx.putImageData(new ImageData(img, w, h), x, y));
     return new Promise((r) => out.toBlob(r, opaque ? 'image/jpeg' : 'image/png', 0.92));
+  }
+
+  // vidéo : pixels RGBA (non prémultipliés) de l'image rendue à l'échelle s, recadrée à W × H
+  // depuis le coin haut gauche (dimensions paires pour le H.264) ; out : tableau réutilisé
+  renderPixels(g, state, src, s, opaque, W, H, out = new Uint8Array(W * H * 4)) {
+    out.fill(0);
+    this.tiles(g, state, src, s, opaque, (img, x, y, w, h) => {
+      const cw = Math.min(w, W - x);
+      if (cw <= 0) return;
+      for (let r = 0; r < h && y + r < H; r++) out.set(img.subarray(r * w * 4, (r * w + cw) * 4), ((y + r) * W + x) * 4);
+    });
+    return out;
   }
 
   job(g, state, src, s, opaque, maxDim, W, H, rx, ry, rw, rh) {
@@ -347,7 +366,8 @@ export class GpuRenderer {
       u_ca: state.fxChroma > 0 ? state.fxChroma * s : 0,
       u_grid: state.fxGrid / 100, u_pitch: [px, py], u_lw: Math.max(1, Math.min(px, py) * state.fxGridW / 100),
       u_scan: state.fxScan / 100, u_scanP: state.fxScanGap * s, u_vig: state.fxVig / 100,
-      u_grain: state.fxGrain / 100, u_solid: job.solid, u_gscale: Math.max(1, s), u_unpremul: !!unpremul
+      u_grain: state.fxGrain / 100, u_solid: job.solid, u_gscale: Math.max(1, s), u_unpremul: !!unpremul,
+      u_grainOff: E.grainOffset(state, job.src)
     });
     this.fullPass();
   }

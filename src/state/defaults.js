@@ -16,5 +16,7 @@ export const defaultSettings = () => ({
   neonA: '#1a0322', neonB: '#c21fd6', neonC: '#f7e85a', neonMid: 55, neonMix: 0, neonSat: 160, neonPop: 45,
   fxGlow: 0, fxGlowR: 8, fxGrid: 0, fxGridW: 18, fxGridSync: true, fxGridSize: 6,
   fxScan: 0, fxScanGap: 4, fxChroma: 0, fxGrain: 0, fxVig: 0,
+  // vidéo : grain décalé à chaque image (sinon figé, comme sur une image)
+  fxGrainAnim: false,
   srcMax: SRC_MAX
 });
