@@ -97,3 +97,12 @@ Vérifié par `npm run compare:gpu` (46 réglages types, GPU ↔ canvas 2D) et `
 - [x] Rendu canvas 2D en secours : choix dans la section Sortie, retour automatique si WebGL2 manque ou si la carte graphique décroche
 - [x] Exports SVG / HTML toujours calculés par le moteur JavaScript
 - [ ] Vérifié à l'œil dans la fenêtre Tauri : passage Carte graphique ↔ Canvas 2D, export PNG 4× enregistré par la boîte de dialogue — *rendu GPU, retour au GPU et export 4× (9 600 × 9 600 px, 5 s) vérifiés à distance dans WebView2*
+
+## Phase 3 · Confort
+
+- [x] Projets `.json` : enregistrer (Ctrl+S, Maj+clic ou Ctrl+Maj+S : enregistrer sous), ouvrir (Ctrl+O), nom du projet et « • » si modifié — *vérifié par `npm test` (format, chemins) et `npm run compare:ui` (section Projets : réglages et aperçu identiques après réouverture)*
+- [x] Image du projet : chemin relatif au fichier (dossier déplacé d'un bloc), chemin absolu, image collée intégrée, image d'exemple ; recherche proposée si l'image est introuvable
+- [ ] Projets vérifiés à la main dans la fenêtre Tauri : enregistrer, fermer et rouvrir l'application, déplacer le dossier projet + image, renommer l'image
+- [ ] Annuler / rétablir global
+- [ ] Préréglages personnels
+- [ ] Calculs lourds dans des Web Workers

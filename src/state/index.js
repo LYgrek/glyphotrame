@@ -19,6 +19,8 @@ export const session = createStore({
   penBusy: false,       // glissement en cours avec l'outil plume
   nearFirst: false,     // survol du premier point (fermer le tracé)
   canUndo: false, canRedo: false,
+  // projet ouvert ou enregistré (chemin du fichier .json), modifications non enregistrées
+  projectPath: null, projectName: null, dirty: false,
   // rendu de l'aperçu et des exports PNG / JPEG : carte graphique (WebGL2) ou canvas 2D
   // (?rendu=canvas dans l'adresse force le canvas 2D, utilisé par le banc compare:ui)
   rendu: typeof location !== 'undefined' && new URLSearchParams(location.search).get('rendu') === 'canvas' ? 'canvas' : 'gpu',

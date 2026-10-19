@@ -10,7 +10,8 @@
     "tauri": "tauri",
     "compare": "node tools/compare-headless.mjs",
     "compare:ui": "node tools/compare-ui.mjs",
-    "compare:gpu": "node tools/compare-headless.mjs compare-gpu.html --gpu"
+    "compare:gpu": "node tools/compare-headless.mjs compare-gpu.html --gpu",
+    "test": "node --test tools/tests/*.test.mjs"
   },
   "dependencies": {
     "@fontsource-variable/archivo": "^5.3.0",

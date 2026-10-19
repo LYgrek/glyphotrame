@@ -39,6 +39,16 @@ et en fin de section, des captures d'écran de chaque section du panneau, de l'e
 
 Non couvert (fenêtres natives) : boîtes Ouvrir / Enregistrer de Windows et glisser-déposer de Tauri, à tester à la main dans `npm run tauri dev`.
 
+## Projets (phase 3)
+
+Fichier `.json` (proposé : `<image>.glyphotrame.json`) : `format`, `version`, `application`, `image`, `reglages` (l'objet `settings`, même forme que `state` dans la référence). Format et lecture : `src/state/project-format.js` (fonctions pures, testées par `npm test`) ; actions : `src/state/project.js`.
+
+- **Image** : chemin absolu + chemin relatif au fichier du projet (un dossier « projet + images » déplacé d'un bloc se rouvre) ; image collée (sans chemin) intégrée en `data:` ; image d'exemple marquée `exemple: true`. À l'ouverture : relatif, puis absolu, puis intégrée ; sinon la recherche est proposée (ou les réglages s'appliquent à l'image actuelle).
+- **Lecture de l'image par son chemin** : commande Rust `lire_image` (`src-tauri/src/lib.rs`, testée par `cargo test`), limitée aux extensions d'images. Le plugin fs n'autorise que les fichiers choisis dans les boîtes de dialogue ; un chemin lu dans un projet n'en fait pas partie.
+- **Réglages** : fusionnés avec les valeurs par défaut (clés connues et du bon type seulement) ; un projet incomplet ou plus ancien s'ouvre, un projet d'une version plus récente est refusé avec un message.
+- **Modifié (•)** : tout changement de réglage ou d'image, sauf la couleur de fond détectée par le détourage automatique. Hors périmètre pour l'instant : avertissement à la fermeture de la fenêtre, « Nouveau projet ».
+- **Banc** : `npm run compare:ui -- Projets` enregistre (repli navigateur : téléchargement), modifie, rouvre, et vérifie réglages et aperçu identiques. Le groupe « Projet » de l'en-tête est masqué dans les captures (absent de la référence).
+
 ## Rendu sur la carte graphique (phase 2)
 
 Le moteur JavaScript calcule toujours la grille (points, glyphes, couleurs) ; `src/gpu/` ne fait que le dessin et la composition. L'aperçu GPU montre donc la même géométrie que l'export SVG. Les exports SVG et HTML restent calculés par le moteur.

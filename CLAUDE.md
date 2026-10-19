@@ -25,6 +25,7 @@ Commandes :
 - `npm install` : installer les dépendances
 - `npm run tauri dev` : lancer l'application en mode développement
 - `npm run tauri build` : créer l'installateur (`src-tauri/target/release/bundle/`)
+- `npm test` : tests unitaires (format des projets, chemins) ; `cd src-tauri; cargo test` : tests Rust
 
 ## Architecture cible
 
@@ -37,7 +38,9 @@ src/
     renderer.js     relie les réglages au moteur et dessine l'aperçu
     actions.js      actions de l'interface (réglages liés, chargement, pipette, exports)
     pen.js          outil plume : outil actif, historique, boutons
-  platform/     Tauri : boîtes de dialogue, lecture / écriture de fichiers, glisser-déposer
+    project.js      projets : enregistrer, ouvrir, suivi des modifications
+    project-format.js  format des fichiers de projet (.json), fonctions pures
+  platform/     Tauri : boîtes de dialogue, lecture / écriture de fichiers, glisser-déposer ; paths.js : chemins relatifs
   engine/       moteur pur JavaScript, sans React, porté depuis la référence
     index.js        point d'entrée (réexporte tous les modules)
     util.js         outils communs, createCanvas

@@ -48,3 +48,6 @@ export const PEN_HINTS = {
   del: () => 'Clique sur un point pour le supprimer.',
   convert: () => 'Clic sur un point : le rend anguleux. Glisser depuis un point : tire de nouvelles poignées de courbe.'
 };
+
+// projet ouvert : l'historique du tracé précédent n'a plus de sens
+export function resetPenHistory() { hist.length = 0; redoStack.length = 0; session.set({ selNode: -1 }); sync(); }

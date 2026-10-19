@@ -110,13 +110,14 @@ function onSettings(next, prev) {
 // taille max changée : on réduit à nouveau l'image d'origine
 function refit(maxDim) {
   if (!src || !src.original) return;
-  src = E.createSource(E.fitImage(src.original, maxDim), src.name, src.original);
+  src = E.createSource(E.fitImage(src.original, maxDim), src.name, src.original, { path: src.path, exemple: src.exemple });
   cutDirty = true;
 }
 
-// nouvelle image source (canvas déjà réduit) ; original = image décodée, pour la taille max
-export function setSource(canvas, name, original = null) {
-  src = E.createSource(canvas, name, original);
+// nouvelle image source (canvas déjà réduit) ; original = image décodée, pour la taille max ;
+// extra = { path } ou { exemple: true } (enregistrés dans les projets)
+export function setSource(canvas, name, original = null, extra = {}) {
+  src = E.createSource(canvas, name, original, extra);
   cutDirty = true;
   if (!settings.get().cutAuto) { silent = true; settings.set({ cutAuto: true }); silent = false; }
   session.set({ sourceName: name });
@@ -128,6 +129,6 @@ export function start() {
   if (started) return;
   started = true;
   settings.subscribe(onSettings);
-  setSource(E.makeSample(), 'exemple-sphere.png');
+  setSource(E.makeSample(), 'exemple-sphere.png', null, { exemple: true });
   if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { E.clearDensityCache(); schedule(); });
 }

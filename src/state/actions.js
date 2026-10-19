@@ -11,19 +11,25 @@ const set = (p) => settings.set(p);
 const lightPaper = (st) => E.lum(E.hexToRgb(st.paper)) > 0.5;
 
 /* ---------- Image ---------- */
-export async function loadImage(file) {
-  if (!file) return;
+// file = { blob, name, path? } ; maxDim : taille max (par défaut celle des réglages) ; rend true si l'image est chargée
+export async function loadImage(file, { quiet = false, maxDim } = {}) {
+  if (!file) return false;
   try {
     const img = await E.loadImage(file.blob);
-    R.setSource(E.fitImage(img, get().srcMax), file.name, img);
-    toast('Image chargée : ' + file.name);
-  } catch (e) { toast(e.message); }
+    R.setSource(E.fitImage(img, maxDim || get().srcMax), file.name, img, file.path ? { path: file.path } : {});
+    session.set({ dirty: true });
+    if (!quiet) toast('Image chargée : ' + file.name);
+    return true;
+  } catch (e) { toast(e.message); return false; }
 }
 export async function openImage() {
   try { await loadImage(await chooseImage()); }
   catch (e) { toast('Impossible de lire ce fichier.'); }
 }
-export const loadSample = () => R.setSource(E.makeSample(), 'exemple-sphere.png');
+export function loadSample() {
+  R.setSource(E.makeSample(), 'exemple-sphere.png', null, { exemple: true });
+  session.set({ dirty: true });
+}
 
 /* ---------- Effet et couleurs ---------- */
 export function setMode(m) {

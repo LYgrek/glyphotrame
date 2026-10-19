@@ -1,8 +1,9 @@
 /* Fichiers : boîtes de dialogue natives Ouvrir / Enregistrer et glisser-déposer (Tauri).
    Hors de Tauri (npm run dev dans un navigateur), repli sur le sélecteur de fichier
    et le téléchargement du navigateur, pratique pour développer et tester. */
-import { open, save } from '@tauri-apps/plugin-dialog';
-import { readFile, writeFile, writeTextFile } from '@tauri-apps/plugin-fs';
+import { open, save, ask } from '@tauri-apps/plugin-dialog';
+import { readFile, readTextFile, writeFile, writeTextFile } from '@tauri-apps/plugin-fs';
+import { invoke } from '@tauri-apps/api/core';
 import { getCurrentWebview } from '@tauri-apps/api/webview';
 
 export const inTauri = () => typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window;
@@ -69,6 +70,55 @@ function downloadInBrowser(name, data) {
   document.body.appendChild(a); a.click(); a.remove();
   setTimeout(() => URL.revokeObjectURL(a.href), 4000);
   return { status: 'downloaded', name };
+}
+
+/* ---------- Projets ---------- */
+const PROJECT_FILTER = { name: 'Projet Glyphotrame', extensions: ['json'] };
+
+// boîte « Ouvrir un projet » → { path, name, text } ou null si annulé (path null hors de Tauri)
+export async function chooseProject() {
+  if (!inTauri()) {
+    const f = await new Promise((resolve) => {
+      const input = document.createElement('input');
+      input.type = 'file'; input.accept = '.json,application/json';
+      input.addEventListener('change', () => resolve(input.files[0] || null));
+      input.addEventListener('cancel', () => resolve(null));
+      input.click();
+    });
+    return f ? { path: null, name: f.name, text: await f.text() } : null;
+  }
+  const path = await open({ title: 'Ouvrir un projet', multiple: false, directory: false, filters: [PROJECT_FILTER] });
+  return path ? { path, name: fileName(path), text: await readTextFile(path) } : null;
+}
+
+// enregistre un projet : directement à currentPath s'il est connu, sinon par la boîte « Enregistrer ».
+// makeText(chemin) fabrique le contenu (il dépend du chemin, pour le chemin relatif de l'image).
+// → { status: 'saved' | 'downloaded' | 'cancelled' | 'error', name, path, error }
+export async function saveProjectFile(currentPath, defaultName, makeText) {
+  if (!inTauri()) return downloadInBrowser(defaultName, makeText(null));
+  let path = currentPath;
+  if (!path) {
+    try { path = await save({ title: 'Enregistrer le projet', defaultPath: defaultName, filters: [PROJECT_FILTER] }); }
+    catch (error) { return { status: 'error', error }; }
+    if (!path) return { status: 'cancelled' };
+  }
+  try {
+    await writeTextFile(path, makeText(path));
+    return { status: 'saved', name: fileName(path), path };
+  } catch (error) { return { status: 'error', error }; }
+}
+
+// image enregistrée dans un projet, lue par son chemin (commande Rust lire_image) → { blob, name, path }
+export async function readImageAtPath(path) {
+  if (!inTauri()) throw new Error('Image introuvable.');
+  const bytes = await invoke('lire_image', { chemin: path });
+  return { blob: new Blob([bytes], { type: mimeOf(path) }), name: fileName(path), path };
+}
+
+// question oui / non (boîte native dans Tauri)
+export async function askYesNo(message, { title = 'Glyphotrame', ok = 'Oui', cancel = 'Annuler' } = {}) {
+  if (!inTauri()) return window.confirm(message);
+  return ask(message, { title, kind: 'warning', okLabel: ok, cancelLabel: cancel });
 }
 
 // glisser-déposer de fichiers sur la fenêtre ; rend une fonction pour arrêter l'écoute.

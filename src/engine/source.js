@@ -6,14 +6,16 @@
      id     change à chaque nouvelle `image` ; sert de clé aux caches du moteur
      name   nom affiché (« photo.jpg »), slug : nom nettoyé pour les exports
      original  image décodée d'origine (pour la réduire à nouveau si la taille max change)
+     path, exemple  chemin du fichier d'origine (si connu), image d'exemple
 */
 import { createCanvas } from './util.js';
 import { SRC_MAX } from './constants.js';
 
 let lastId = 0;
 
-export function createSource(canvas, name, original = null) {
-  return { raw: canvas, image: canvas, id: ++lastId, name, slug: slugName(name), original };
+// extra : { path } (chemin du fichier, si connu) ou { exemple: true }, gardés pour les projets
+export function createSource(canvas, name, original = null, extra = {}) {
+  return { raw: canvas, image: canvas, id: ++lastId, name, slug: slugName(name), original, ...extra };
 }
 
 // même source, nouvelle image utilisée par l'effet (après détourage)

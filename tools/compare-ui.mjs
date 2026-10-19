@@ -234,17 +234,17 @@ const SECTIONS = {
     ['Export SVG', "T.btn('SVG', '.exports button')"],
     ['Fenêtre Code (HTML + CSS)', "T.btn('Code', '.exports button')"],
     ['Copier le code', "T.btn('Copier le code')"],
-    ['Enregistrer le HTML', perPage("T.btn('Enregistrer')", "T.btn('Télécharger')")],
+    ['Enregistrer le HTML', perPage("T.btn('Enregistrer', '.sheet button')", "T.btn('Télécharger', '.sheet button')")],
     ['Onglet SVG', "T.btn('SVG en ligne')"],
-    ['Enregistrer le SVG', perPage("T.btn('Enregistrer')", "T.btn('Télécharger')")],
+    ['Enregistrer le SVG', perPage("T.btn('Enregistrer', '.sheet button')", "T.btn('Télécharger', '.sheet button')")],
     ['Onglet texte brut', "T.btn('Texte brut')"],
     ['Copier le texte', "T.btn('Copier le code')"],
-    ['Enregistrer le texte', perPage("T.btn('Enregistrer')", "T.btn('Télécharger')")],
+    ['Enregistrer le texte', perPage("T.btn('Enregistrer', '.sheet button')", "T.btn('Télécharger', '.sheet button')")],
     ['Échap ferme la fenêtre', key('Escape', 'Escape', 27)],
     ['Halftone + dégradé + transparent : PNG', seq("T.btn('Halftone', '.seg.effects button')", "T.check('Appliquer l', true)", "T.check('Fond transparent', true)", "T.btn('PNG', '.exports button')")],
     ['Halftone : JPEG et SVG', seq("T.btn('JPEG', '.exports button')", "T.btn('SVG', '.exports button')")],
     ['Fenêtre Code en halftone (pas de texte brut)', "T.btn('Code', '.exports button')"],
-    ['Enregistrer le HTML halftone', perPage("T.btn('Enregistrer')", "T.btn('Télécharger')")],
+    ['Enregistrer le HTML halftone', perPage("T.btn('Enregistrer', '.sheet button')", "T.btn('Télécharger', '.sheet button')")],
     ['Clic hors de la fenêtre', "document.querySelector('.sheet').dispatchEvent(new MouseEvent('click', { bubbles: true }))"],
     ['Bouton Fermer', seq("T.btn('Code', '.exports button')", "T.btn('Fermer', '.sheet button')")]
   ]
@@ -287,7 +287,7 @@ async function shots(p) {
   return p.eval(`(() => {
     document.activeElement && document.activeElement.blur && document.activeElement.blur();
     const st = document.createElement('style'); st.id = 'cmp-shot';
-    st.textContent = '.controls{max-height:none!important;overflow:visible!important}*{transition:none!important;caret-color:transparent!important}';
+    st.textContent = '.controls{max-height:none!important;overflow:visible!important}*{transition:none!important;caret-color:transparent!important}.bar .project{display:none!important}';
     document.head.append(st);
     for (const f of document.querySelectorAll('.controls .field')) { const l = f.querySelector('label, .name'); if (l && T.skip.some((s) => T.norm(l.textContent).startsWith(s))) f.style.display = 'none'; }
     window.scrollTo(0, 0);
@@ -434,6 +434,50 @@ try {
       if (got === expected) console.log(`  ✓ ${name} : ${got}`);
       else { ko++; console.log(`  ✗ ${name} : ${got} (attendu ${expected})`); }
     }
+  }
+  // projets (absents de la référence) : enregistrer, modifier, rouvrir → même état, même aperçu
+  if (!only.length || only.includes('Projets')) {
+    console.log('\n■ Projets (application seule)');
+    const check = (name, ok, detail = '') => { total++; if (!ok) ko++; console.log(`  ${ok ? '✓' : '✗'} ${name}${detail ? ' : ' + detail : ''}`); };
+    const state = "(async () => JSON.stringify((await import('/src/state/index.js')).settings.get()))()";
+    const sess = (k) => `(async () => (await import('/src/state/index.js')).session.get()[${JSON.stringify(k)}])()`;
+    const projFile = () => readdirSync(dl.app).filter((f) => f.endsWith('.glyphotrame.json')).map((f) => join(dl.app, f));
+    for (const f of projFile()) rmSync(f);
+    // réglages variés + image collée (sans chemin : elle sera intégrée au fichier)
+    await app.eval('T.paste(1300, 900)'); await sleep(1500);
+    for (const js of ["T.btn('Halftone', '.seg.effects button')", "T.btn('Étoile', '.shapes button')", "T.slider('Taille de la trame', 15)",
+      "T.btn('Néon', '.seg.modes button')", "T.check('Appliquer l', true)", "T.btn('Courbe libre')", "T.slider('Lueur', 70)"]) await app.eval(js);
+    await settle(app);
+    const before = await app.eval(state), hashBefore = await app.eval("T.hash('.pane.after canvas')");
+    check('Projet modifié signalé (•)', await app.eval(sess('dirty')) === true);
+    await app.eval("T.btn('Enregistrer', '.project button')");
+    for (let i = 0; i < 30 && !projFile().length; i++) await sleep(300);
+    const file = projFile()[0];
+    check('Projet enregistré (fichier téléchargé)', !!file, file ? file.split(/[\\/]/).pop() : 'aucun fichier');
+    check('Plus de modifications en attente', await app.eval(sess('dirty')) === false);
+    const text = file ? readFileSync(file, 'utf8') : '{}', json = JSON.parse(text);
+    check('Image collée intégrée au fichier', typeof json.image?.donnees === 'string' && json.image.donnees.startsWith('data:image/'), json.image?.nom);
+    // modifications, puis réouverture
+    for (const js of ["T.btn('Caractères', '.seg.effects button')", "T.slider('Largeur de sortie', 600)", 'T.btn("Image d\'exemple")']) await app.eval(js);
+    await settle(app);
+    check('Aperçu modifié avant réouverture', (await app.eval("T.hash('.pane.after canvas')")) !== hashBefore);
+    await app.eval(`(async () => { const P = await import('/src/state/project.js'), F = await import('/src/state/project-format.js');
+      await P.applyProject(F.parseProject(${JSON.stringify(text)}), null, 'test.glyphotrame.json'); })()`);
+    await sleep(800); await settle(app);
+    const after = await app.eval(state);
+    check('Réglages restaurés à l\'identique', after === before, after === before ? '' : 'différents');
+    check('Aperçu identique', (await app.eval("T.hash('.pane.after canvas')")) === hashBefore);
+    check('Image restaurée', (await app.eval(sess('sourceName'))) === 'colle.png');
+    check('Projet ouvert sans modification en attente', await app.eval(sess('dirty')) === false);
+    // image d'exemple : simple marque dans le fichier
+    for (const f of projFile()) rmSync(f);
+    await app.eval('T.btn("Image d\'exemple")'); await settle(app);
+    await app.eval("T.btn('Enregistrer', '.project button')");
+    for (let i = 0; i < 30 && !projFile().length; i++) await sleep(300);
+    const ex = projFile()[0] ? JSON.parse(readFileSync(projFile()[0], 'utf8')) : {};
+    check("Image d'exemple enregistrée comme telle", ex.image?.exemple === true && !ex.image?.donnees);
+    // retour aux réglages par défaut pour la suite
+    await app.eval("(async () => { const { settings } = await import('/src/state/index.js'), { defaultSettings } = await import('/src/state/defaults.js'); settings.set(defaultSettings()); })()");
   }
   const errs = [...app.logs.map((l) => 'app ' + l), ...ref.logs.map((l) => 'réf ' + l)];
   console.log(`\n${total - ko}/${total} vérifications identiques · ${shotKo} capture(s) différente(s)` + (errs.length ? `\nConsole :\n${errs.join('\n')}` : ' · console sans erreur'));
