@@ -47,7 +47,8 @@ function chooseImageInBrowser() {
   });
 }
 
-// boîte « Enregistrer » puis écriture → { status: 'saved' | 'cancelled' | 'error', name, error }
+// boîte « Enregistrer » puis écriture → { status: 'saved' | 'downloaded' | 'cancelled' | 'error', name, error }
+// ('downloaded' : hors de Tauri, le fichier part dans les téléchargements du navigateur)
 // data : texte (SVG, HTML, TXT) ou Blob (PNG, JPEG) ; ext : clé de FILTERS
 export async function saveFile(defaultName, data, ext) {
   if (!inTauri()) return downloadInBrowser(defaultName, data);
@@ -67,7 +68,7 @@ function downloadInBrowser(name, data) {
   const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name;
   document.body.appendChild(a); a.click(); a.remove();
   setTimeout(() => URL.revokeObjectURL(a.href), 4000);
-  return { status: 'saved', name };
+  return { status: 'downloaded', name };
 }
 
 // glisser-déposer de fichiers sur la fenêtre ; rend une fonction pour arrêter l'écoute.

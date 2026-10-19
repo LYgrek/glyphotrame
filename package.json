@@ -8,7 +8,8 @@
     "build": "vite build",
     "preview": "vite preview",
     "tauri": "tauri",
-    "compare": "node tools/compare-headless.mjs"
+    "compare": "node tools/compare-headless.mjs",
+    "compare:ui": "node tools/compare-ui.mjs"
   },
   "dependencies": {
     "@fontsource-variable/archivo": "^5.3.0",

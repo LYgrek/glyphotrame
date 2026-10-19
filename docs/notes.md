@@ -17,6 +17,28 @@ La référence y est chargée en mémoire et son script est seulement complété
 
 À relancer après toute modification de `src/engine/`.
 
+## Vérifier que l'interface reste identique à la référence
+
+```powershell
+npm run compare:ui                  # toutes les sections (≈ 5 min)
+npm run compare:ui -- Dégradé Halftone   # seulement certaines sections
+$env:THEME="light"; npm run compare:ui   # en thème clair (sinon celui du système)
+$env:VERBOSE="1"; npm run compare:ui     # affiche les statistiques après chaque étape
+```
+
+Joue les mêmes actions dans l'application et dans la référence, section par section de `docs/fonctionnalites.md` (228 vérifications : clics, curseurs, cases, sélecteurs de couleur, gestes de plume à la souris et au clavier, éditeur de courbe, pipette, collage et dépôt d'image, vues, fenêtre Code, exports). Après chaque action, compare :
+
+- les pixels de l'aperçu, de l'image « avant » et de la vignette du détourage ;
+- l'état visible de chaque contrôle (libellés, valeurs affichées, cases, boutons enfoncés, blocs désactivés) ;
+- le calque du tracé plume, les messages affichés, le texte copié ;
+- les fichiers exportés, octet par octet ;
+
+et en fin de section, des captures d'écran de chaque section du panneau, de l'en-tête, de la tête de l'aperçu et de la barre plume (écart toléré : 2 niveaux par canal, bruit d'anticrénelage des coins arrondis). Les captures qui diffèrent sont enregistrées dans `tools/.ui-diff/`. Une dernière section vérifie le réglage de taille max (absent de la référence). Code de sortie 1 au moindre écart.
+
+À relancer après toute modification de l'interface (`src/ui/`, `src/state/`, styles). Fichiers : `tools/compare-ui.mjs` (étapes), `tools/ui-probe.js` (sonde injectée dans les deux pages), `tools/lib/cdp.mjs` (navigateur headless).
+
+Non couvert (fenêtres natives) : boîtes Ouvrir / Enregistrer de Windows et glisser-déposer de Tauri, à tester à la main dans `npm run tauri dev`.
+
 ## Rendu logiciel ou accéléré
 
 Le résultat dépend légèrement du rendu canvas : avec la carte graphique (WebView2 dans Tauri, navigateur normal), l'image d'exemple donne 7 975 glyphes ; en rendu logiciel (`npm run compare`, Edge sans carte graphique), 7 966. La référence et l'application donnent toujours le même chiffre dans le même environnement : ce n'est pas un écart du portage.
@@ -25,8 +47,8 @@ Le résultat dépend légèrement du rendu canvas : avec la carte graphique (Web
 
 - État : `src/state/` — deux stores (`settings` = réglages, même forme que `state` dans la référence ; `session` = état de l'interface), `renderer.js` relie les réglages au moteur (recalcul complet ou simple recomposition, comme `schedule` / `scheduleGrad`), `actions.js` regroupe les changements qui en entraînent d'autres, `pen.js` l'historique et les outils de la plume.
 - Fichiers : `src/platform/files.js` — boîtes Ouvrir / Enregistrer de Tauri, glisser-déposer natif (les fichiers déposés sont lisibles par le plugin fs sans permission en plus). Dans un simple navigateur (`npm run dev`), repli sur le sélecteur de fichier et le téléchargement.
-- Vérifié en jouant les mêmes clics dans l'application et la référence (Edge sans fenêtre, protocole DevTools) : 34 étapes de réglages, 24 gestes de plume, éditeur de courbe, pipette, vues, fenêtre Code. Seules différences : l'ordre des classes CSS sur les points d'ancrage et le chemin du tracé vidé quand il est masqué (invisible dans les deux cas).
-- Différences voulues : bouton « Enregistrer… » au lieu de « Télécharger » dans la fenêtre Code ; curseur « Taille max de l'image source » dans la section Image.
+- Différences voulues : bouton « Enregistrer… » au lieu de « Télécharger » dans la fenêtre Code ; zone de dépôt en bouton (ouvre la boîte native) au lieu d'un champ fichier ; curseur « Taille max de l'image source » dans la section Image (1000 → 8000 px ; jamais d'agrandissement ; l'image d'origine est gardée pour la réduire à nouveau quand le réglage change). Dans Tauri, un export affiche « Fichier enregistré : … » ; dans un navigateur, « Téléchargement lancé : … » comme la référence.
+- Piège corrigé : un texte affiché en plusieurs morceaux (nœuds de texte) n'est pas espacé comme le même texte d'un seul tenant (crénage). Les statistiques de l'aperçu sont donc construites en une seule chaîne, comme dans la référence.
 
 ## Particularités de la référence reproduites à l'identique
 

@@ -8,7 +8,7 @@ import { settings, session } from './index.js';
 
 let src = null, grid = null;
 let cutDirty = true, pending = false, gradPending = false, dragging = false;
-let renderId = 0, fontRetries = 0, silent = false, started = false;
+let renderId = 0, fontRetries = 0, silent = false, started = false, pendingMax = 0;
 const canvases = { out: null, orig: null, cutPreview: null };
 
 // références React des canvas (stables)
@@ -41,6 +41,8 @@ export function endDrag() { if (!dragging) return; dragging = false; scheduleGra
 
 async function render() {
   if (!src) return;
+  // taille max changée : une seule nouvelle réduction par image affichée, même si le curseur bouge vite
+  if (pendingMax) { refit(pendingMax); pendingMax = 0; }
   if (cutDirty) {
     cutDirty = false;
     const st = settings.get();
@@ -69,7 +71,7 @@ function onSettings(next, prev) {
   let full = false, comp = false;
   for (const k in next) {
     if (next[k] === prev[k] || QUIET.has(k)) continue;
-    if (k === 'srcMax') { refit(next.srcMax); full = true; }
+    if (k === 'srcMax') { pendingMax = next.srcMax; full = true; }
     else if (CUT_KEYS.has(k)) { cutDirty = true; full = true; }
     else if (k === 'grad' || /^g[A-Z]/.test(k) || /^fx/.test(k)) comp = true;
     else { full = true; if (k === 'font') fontRetries = 0; }

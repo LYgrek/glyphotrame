@@ -2,10 +2,10 @@
 
 Inventaire de `reference/glyphotrame-reference.html`. À cocher au fil du portage (phase 1), puis à vérifier avec le rendu GPU (phase 2).
 
-Phase 1 : les cases cochées ont été vérifiées en jouant les mêmes actions dans l'application et dans la référence (aperçu identique au pixel près, mêmes statistiques, mêmes messages). Les cases restantes passent par les fenêtres natives de Windows et doivent être testées à la main dans `npm run tauri dev`.
+Phase 1 : les cases cochées sont vérifiées par `npm run compare:ui`, qui joue les mêmes actions dans l'application et dans la référence (228 vérifications, thèmes clair et sombre) : aperçu identique au pixel près, même état de chaque contrôle, mêmes messages, mêmes captures d'écran du panneau, fichiers exportés identiques octet par octet. Les deux cases restantes passent par les fenêtres natives de Windows et le glisser-déposer de Tauri, que le banc ne peut pas piloter : à tester à la main dans `npm run tauri dev`.
 
 ## Image
-- [ ] Ouvrir une image (boîte de dialogue native), glisser-déposer, coller (Ctrl+V) — *coller vérifié ; boîte de dialogue et glisser-déposer à tester à la main*
+- [ ] Ouvrir une image (boîte de dialogue native), glisser-déposer, coller (Ctrl+V) — *coller et glisser-déposer du navigateur vérifiés ; boîte « Ouvrir » et glisser-déposer de Tauri à tester à la main*
 - [x] Image d'exemple (sphère générée)
 - [x] Largeur de sortie (300 → 2400 px)
 - [x] Taille max de l'image source réglable (1000 → 8000 px, 1800 par défaut comme la référence) — *nouveau*
@@ -83,4 +83,4 @@ Phase 1 : les cases cochées ont été vérifiées en jouant les mêmes actions 
 - [x] PNG et JPEG, résolution 1× à 4×
 - [x] SVG vectoriel : texte éditable ou formes, dégradé en masques, effets en filtres / motifs
 - [x] Code : HTML + CSS (grille exacte, variable --k), SVG en ligne, texte brut (caractères seulement)
-- [ ] Copier le code, enregistrer le fichier (boîte de dialogue native) — *fichiers produits vérifiés (PNG 2400 × 2400 à 2×, JPEG, SVG, page HTML, texte) ; boîte « Enregistrer » et copie à tester à la main*
+- [ ] Copier le code, enregistrer le fichier (boîte de dialogue native) — *copie et contenu des 10 fichiers exportés vérifiés (identiques à la référence) ; boîte « Enregistrer » à tester à la main*

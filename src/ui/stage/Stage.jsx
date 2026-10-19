@@ -8,22 +8,25 @@ import PenToolbar from './PenToolbar.jsx';
 import PenLayer from './PenLayer.jsx';
 import './Stage.css';
 
+// Statistiques. Chaque texte est une seule chaîne, comme dans la référence : un texte coupé en
+// plusieurs morceaux est espacé (crénage) différemment par le navigateur.
 function Stats() {
   const st = useSession('stats');
   if (!st) return <div className="stats">Préparation…</div>;
+  let strong, rest, warn = '';
   if (st.kind === 'halftone') {
     const what = { points: 'points', lignes: 'segments de ligne', pointillisme: 'points' }[st.type];
-    return (
-      <div className="stats">
-        <b>{fmt(st.count)}</b> {what}{st.cmyk ? ' (4 encres)' : ''} · trame {st.htCell} px · {fmt(st.W)} × {fmt(st.H)} px
-        {st.count > 150000 && <> · <span className="warn">trame très fine, le rendu ralentit</span></>}
-      </div>
-    );
+    strong = fmt(st.count);
+    rest = ` ${what}${st.cmyk ? ' (4 encres)' : ''} · trame ${st.htCell} px · ${fmt(st.W)} × ${fmt(st.H)} px`;
+    if (st.count > 150000) warn = 'trame très fine, le rendu ralentit';
+  } else {
+    strong = `${fmt(st.cols)} × ${fmt(st.rows)}`;
+    rest = ` caractères · ${fmt(st.count)} glyphes · ${fmt(st.W)} × ${fmt(st.H)} px`;
+    if (st.cols * st.rows > 250000) warn = 'grille très dense, le rendu ralentit';
   }
   return (
     <div className="stats">
-      <b>{fmt(st.cols)} × {fmt(st.rows)}</b> caractères · {fmt(st.count)} glyphes · {fmt(st.W)} × {fmt(st.H)} px
-      {st.cols * st.rows > 250000 && <> · <span className="warn">grille très dense, le rendu ralentit</span></>}
+      <b>{strong}</b>{rest + (warn ? ' · ' : '')}{warn && <span className="warn">{warn}</span>}
     </div>
   );
 }

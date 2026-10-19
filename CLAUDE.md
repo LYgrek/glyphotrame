@@ -62,7 +62,7 @@ src/
     Header, CodeSheet, Toast
 src-tauri/      côté Rust : plugins dialog + fs, configuration de la fenêtre
 reference/      version HTML d'origine (ne pas modifier)
-tools/          banc de comparaison moteur ↔ référence (`npm run compare`), hors application
+tools/          bancs de comparaison avec la référence (`npm run compare`, `npm run compare:ui`), hors application
 docs/           fonctionnalités, notes
 ```
 
@@ -82,7 +82,7 @@ Principes :
 ## Règles de travail
 
 - Avancer par **petites étapes vérifiables**. Après chaque étape : lancer `npm run tauri dev`, vérifier, et comparer avec `reference/glyphotrame-reference.html`.
-- Après toute modification de `src/engine/` : `npm run compare` doit rester entièrement vert (voir `docs/notes.md`).
+- Après toute modification de `src/engine/` : `npm run compare` doit rester entièrement vert ; après toute modification de l'interface : `npm run compare:ui` (voir `docs/notes.md`).
 - Cocher l'avancement dans `docs/fonctionnalites.md`.
 - Faire un commit git à chaque étape qui fonctionne, avec un message en français.
 - Textes de l'interface, messages d'erreur et commentaires en français.

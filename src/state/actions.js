@@ -107,6 +107,7 @@ export function pickAt(fx, fy) {
 /* ---------- Exports ---------- */
 function reportSave(r) {
   if (r.status === 'saved') toast('Fichier enregistré : ' + r.name);
+  else if (r.status === 'downloaded') toast('Téléchargement lancé : ' + r.name);
   else if (r.status === 'cancelled') toast('Export annulé.');
   else { console.error(r.error); toast("L'export n'a pas abouti : " + (r.error && r.error.message || r.error)); }
 }
