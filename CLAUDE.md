@@ -33,6 +33,10 @@ src/
   main.jsx, App.jsx
   state/        état global (un seul store, même forme que l'objet `state` de la référence)
   engine/       moteur pur JavaScript, sans React, porté depuis la référence
+    index.js        point d'entrée (réexporte tous les modules)
+    util.js         outils communs, createCanvas
+    constants.js    polices, jeux de caractères, nuanciers, palettes néon, courbes, encres CMJN
+    source.js       image source (chargement, taille max, image d'exemple)
     tones.js        luminosité, contraste, inversion, carte des tons
     chars.js        grille de caractères, densité des glyphes
     halftone.js     points / lignes / pointillisme / CMJN, formes
@@ -41,6 +45,7 @@ src/
     penpath.js      tracé plume (Bézier, ouvert / fermé) et masque
     neon.js         palette néon, couleurs de l'image ravivées
     postfx.js       lueur, grille d'écran, balayage, aberration, grain, vignettage
+    render.js       calcul de la grille et composition canvas 2D (aperçu, PNG, JPEG)
     export-svg.js   export SVG vectoriel (masques, filtres, motifs)
     export-html.js  export HTML + CSS, texte brut
   gpu/          rendu WebGL2 de l'aperçu (phase 2)
@@ -48,6 +53,7 @@ src/
                 barre d'outils plume, zone d'aperçu (résultat / côte à côte / curseur), fenêtre Code
 src-tauri/      côté Rust : plugins dialog + fs, configuration de la fenêtre
 reference/      version HTML d'origine (ne pas modifier)
+tools/          banc de comparaison moteur ↔ référence (`npm run compare`), hors application
 docs/           fonctionnalités, notes
 ```
 
@@ -67,6 +73,7 @@ Principes :
 ## Règles de travail
 
 - Avancer par **petites étapes vérifiables**. Après chaque étape : lancer `npm run tauri dev`, vérifier, et comparer avec `reference/glyphotrame-reference.html`.
+- Après toute modification de `src/engine/` : `npm run compare` doit rester entièrement vert (voir `docs/notes.md`).
 - Cocher l'avancement dans `docs/fonctionnalites.md`.
 - Faire un commit git à chaque étape qui fonctionne, avec un message en français.
 - Textes de l'interface, messages d'erreur et commentaires en français.
