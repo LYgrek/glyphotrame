@@ -43,3 +43,4 @@ desktop.ini
 
 # Captures du banc compare-ui
 tools/.ui-diff/
+tools/.gpu-diff/

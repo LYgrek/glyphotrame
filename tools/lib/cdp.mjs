@@ -26,19 +26,20 @@ export async function startVite() {
 let nextPort = 9333;
 
 // ouvre un onglet headless sur url → page { eval, send, mouse, key, shot, logs, close }
-export async function openPage(url, { width = 1440, height = 900 } = {}) {
+export async function openPage(url, { width = 1440, height = 900, gpu = false } = {}) {
   const exe = process.env.BROWSER || BROWSERS.find((p) => existsSync(p));
   if (!exe) throw new Error('Aucun navigateur trouvé (Edge ou Chrome). Indique-le avec la variable BROWSER.');
   const port = nextPort++;
   const profile = mkdtempSync(join(tmpdir(), 'glyphotrame-cdp-'));
-  const proc = spawn(exe, ['--headless=new', '--disable-gpu', '--no-first-run', '--no-default-browser-check', '--hide-scrollbars',
+  const proc = spawn(exe, ['--headless=new', ...(gpu ? ['--use-angle=d3d11', '--ignore-gpu-blocklist'] : ['--disable-gpu']), '--no-first-run', '--no-default-browser-check', '--hide-scrollbars',
     `--window-size=${width},${height}`, `--remote-debugging-port=${port}`, `--user-data-dir=${profile}`, url], { stdio: 'ignore' });
 
   let wsUrl = null;
   for (let i = 0; i < 100 && !wsUrl; i++) {
     try {
       const list = await (await fetch(`http://127.0.0.1:${port}/json`)).json();
-      const t = list.find((x) => x.type === 'page');
+      // l'onglet de la page demandée (Edge peut ouvrir d'abord un onglet système, edge://…)
+      const t = list.find((x) => x.type === 'page' && x.url.startsWith(url.split('?')[0])) || list.find((x) => x.type === 'page' && !/^(edge|chrome):/.test(x.url));
       if (t) wsUrl = t.webSocketDebuggerUrl;
     } catch { /* navigateur pas encore prêt */ }
     if (!wsUrl) await sleep(200);

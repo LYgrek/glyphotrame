@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Comparaison GPU ↔ canvas 2D</title>
+<style>
+  body { margin: 24px; font: 14px/1.45 "Archivo", system-ui, sans-serif; color: #14161b; background: #f8f9fb; }
+  h1 { font: 600 24px/1.1 "Fraunces", Georgia, serif; margin: 0 0 6px; }
+  p { margin: 0 0 16px; color: #5a6270; }
+  table { border-collapse: collapse; width: 100%; font: 12px/1.4 "IBM Plex Mono", monospace; }
+  th, td { text-align: left; padding: 5px 8px; border-bottom: 1px solid #d3d8e0; vertical-align: top; }
+  th { font: 600 11px/1 "Archivo", sans-serif; letter-spacing: .1em; text-transform: uppercase; color: #5a6270; }
+  .ok { color: #1a7f3c; } .ko { color: #b4231a; font-weight: 600; }
+  td img { width: 120px; height: auto; image-rendering: pixelated; border: 1px solid #d3d8e0; margin-right: 4px; background: repeating-conic-gradient(#d9d9d9 0 25%, #fff 0 50%) 0 0/12px 12px; }
+  pre { margin: 0; white-space: pre-wrap; }
+</style>
+</head>
+<body>
+<h1>Comparaison GPU ↔ canvas 2D</h1>
+<p id="cmp-status">Chargement…</p>
+<table>
+  <thead><tr><th>Scénario</th><th>Aperçu</th><th>Export 2× (tuiles)</th><th>Temps canvas / GPU</th><th>Canvas · GPU · écart ×4</th></tr></thead>
+  <tbody id="cmp-rows"></tbody>
+</table>
+<pre id="cmp-summary"></pre>
+<script type="module" src="./compare-gpu.js"></script>
+</body>
+</html>
