@@ -1,5 +1,6 @@
 use std::path::Path;
 use tauri::ipc::Response;
+use tauri_plugin_shell::ShellExt;
 
 /// Extensions acceptées par `lire_image`.
 const EXTENSIONS_IMAGES: [&str; 9] = ["jpg", "jpeg", "png", "webp", "gif", "svg", "bmp", "avif", "ico"];
@@ -30,13 +31,40 @@ fn lire_octets_image(chemin: &Path) -> Result<Vec<u8>, String> {
     })
 }
 
+/// Versions de ffmpeg et ffprobe (sidecars, voir docs/video.md) : première ligne de « -version ».
+/// ffmpeg n'est lancé que depuis le Rust, avec des arguments fixés ici, jamais venus de l'interface.
+#[tauri::command]
+async fn version_ffmpeg(app: tauri::AppHandle) -> Result<String, String> {
+    let mut lignes = Vec::new();
+    for nom in ["ffmpeg", "ffprobe"] {
+        let sortie = app
+            .shell()
+            .sidecar(nom)
+            .map_err(|e| format!("{nom} introuvable (lancer tools/get-ffmpeg.ps1) : {e}"))?
+            .args(["-hide_banner", "-version"])
+            .output()
+            .await
+            .map_err(|e| format!("{nom} ne démarre pas : {e}"))?;
+        if !sortie.status.success() {
+            return Err(format!("{nom} a échoué (code {:?})", sortie.status.code()));
+        }
+        lignes.push(premiere_ligne(&sortie.stdout));
+    }
+    Ok(lignes.join("\n"))
+}
+
+fn premiere_ligne(octets: &[u8]) -> String {
+    String::from_utf8_lossy(octets).lines().next().unwrap_or("").trim().to_string()
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
-        .invoke_handler(tauri::generate_handler![lire_image])
+        .plugin(tauri_plugin_shell::init())
+        .invoke_handler(tauri::generate_handler![lire_image, version_ffmpeg])
         .run(tauri::generate_context!())
         .expect("erreur au lancement de l'application Tauri");
 }
@@ -60,6 +88,12 @@ mod tests {
         assert_eq!(lire_octets_image(&chemin).unwrap_err(), "Ce fichier n'est pas une image.");
         assert!(lire_octets_image(Path::new("C:/sans-extension")).is_err());
         std::fs::remove_file(chemin).unwrap();
+    }
+
+    #[test]
+    fn premiere_ligne_de_la_version() {
+        assert_eq!(premiere_ligne(b"ffmpeg version n9.0 Copyright\r\nbuilt with gcc\r\n"), "ffmpeg version n9.0 Copyright");
+        assert_eq!(premiere_ligne(b""), "");
     }
 
     #[test]

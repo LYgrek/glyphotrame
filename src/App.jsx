@@ -4,6 +4,7 @@ import { start } from './state/renderer.js';
 import { loadImage } from './state/actions.js';
 import { openProject, saveProject } from './state/project.js';
 import { onFileDrop } from './platform/files.js';
+import { ffmpegVersion } from './platform/ffmpeg.js';
 import Header from './ui/Header.jsx';
 import Controls from './ui/panel/Controls.jsx';
 import Stage from './ui/stage/Stage.jsx';
@@ -14,6 +15,8 @@ import './App.css';
 export default function App() {
   useEffect(() => {
     start();
+    // vidéo (étape 0) : ffmpeg embarqué, version affichée dans la console
+    ffmpegVersion().then((v) => { if (v) console.info('ffmpeg embarqué :\n' + v); }).catch((e) => console.warn('ffmpeg indisponible :', e));
     // coller une image (Ctrl+V), sauf dans le champ des caractères
     const onPaste = (e) => {
       if (e.target && e.target.id === 'chars') return;

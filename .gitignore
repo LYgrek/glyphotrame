@@ -44,3 +44,6 @@ desktop.ini
 # Captures du banc compare-ui
 tools/.ui-diff/
 tools/.gpu-diff/
+
+# Binaires ffmpeg / ffprobe (sidecars, lourds) : tools/get-ffmpeg.ps1 les télécharge
+src-tauri/binaries/

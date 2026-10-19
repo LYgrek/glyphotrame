@@ -43,8 +43,11 @@ Toujours dans le terminal :
 
 ```powershell
 npm install
+powershell -ExecutionPolicy Bypass -File .\tools\get-ffmpeg.ps1
 npm run tauri dev
 ```
+
+`get-ffmpeg.ps1` télécharge **ffmpeg** et **ffprobe** (environ 185 Mo, une seule fois) dans `src-tauri\binaries\` : l'application s'en sert pour les vidéos, et Rust refuse de compiler s'ils manquent. Le dossier n'est pas enregistré dans git (fichiers lourds) : relance le script sur chaque nouvel ordinateur. Option `-Licence lgpl` pour une build sans x264 (voir la note de licence dans `docs/video.md`), `-Force` pour retélécharger.
 
 La première fois, Rust compile tout : compte **3 à 10 minutes**. Les fois suivantes, c'est quelques secondes.
 Une fenêtre « Glyphotrame » s'ouvre avec la page de démo de Tauri : ton environnement fonctionne. Ferme-la (ou `Ctrl+C` dans le terminal).

@@ -19,10 +19,12 @@ Il existe déjà une version complète et fonctionnelle en **un seul fichier HTM
 - **Tauri 2** (Rust) pour la fenêtre, l'accès aux fichiers et l'installateur.
 - **React + Vite** (JavaScript, pas TypeScript) pour l'interface.
 - **WebGL2** pour l'aperçu calculé sur la carte graphique (phase 2). Pas de WebGPU : il n'est pas encore fiable dans les WebView de Tauri sur macOS et Linux.
-- Plugins Tauri : `dialog` (ouvrir / enregistrer) et `fs` (écrire les fichiers exportés).
+- Plugins Tauri : `dialog` (ouvrir / enregistrer), `fs` (écrire les fichiers exportés) et `shell` (côté Rust seulement : lancer ffmpeg / ffprobe).
+- **ffmpeg / ffprobe** embarqués comme sidecars (`bundle.externalBin`, dossier `src-tauri/binaries/`, non versionné) pour la vidéo (`docs/video.md`). Ils ne sont lancés que par des commandes Rust dédiées, avec des arguments fixés côté Rust ; l'interface n'a aucune permission pour exécuter un programme.
 
 Commandes :
 - `npm install` : installer les dépendances
+- `powershell -ExecutionPolicy Bypass -File .\tools\get-ffmpeg.ps1` : télécharger ffmpeg et ffprobe dans `src-tauri/binaries/` (obligatoire avant de compiler)
 - `npm run tauri dev` : lancer l'application en mode développement
 - `npm run tauri build` : créer l'installateur (`src-tauri/target/release/bundle/`)
 - `npm test` : tests unitaires (format des projets, chemins) ; `cd src-tauri; cargo test` : tests Rust
@@ -40,7 +42,8 @@ src/
     pen.js          outil plume : outil actif, historique, boutons
     project.js      projets : enregistrer, ouvrir, suivi des modifications
     project-format.js  format des fichiers de projet (.json), fonctions pures
-  platform/     Tauri : boîtes de dialogue, lecture / écriture de fichiers, glisser-déposer ; paths.js : chemins relatifs
+  platform/     Tauri : boîtes de dialogue, lecture / écriture de fichiers, glisser-déposer ; paths.js : chemins relatifs ;
+                ffmpeg.js : appels aux commandes Rust de la vidéo
   engine/       moteur pur JavaScript, sans React, porté depuis la référence
     index.js        point d'entrée (réexporte tous les modules)
     util.js         outils communs, createCanvas
@@ -69,7 +72,8 @@ src/
     panel/          colonne de réglages, une section par bloc, éditeur de courbe
     stage/          aperçu (vues, curseur avant-après), barre et gestes de la plume
     Header, CodeSheet, Toast
-src-tauri/      côté Rust : plugins dialog + fs, configuration de la fenêtre
+src-tauri/      côté Rust : plugins dialog + fs + shell, commandes (lire_image, ffmpeg), configuration de la fenêtre
+  binaries/       ffmpeg / ffprobe (téléchargés par tools/get-ffmpeg.ps1, non versionnés)
 reference/      version HTML d'origine (ne pas modifier)
 tools/          bancs de comparaison (`npm run compare`, `compare:ui`, `compare:gpu`), hors application
 docs/           fonctionnalités, notes
@@ -85,7 +89,7 @@ Principes :
 1. **Portage à l'identique** (moteur canvas 2D existant) : même interface, mêmes réglages, mêmes résultats que la référence. Ouvrir et enregistrer via les boîtes de dialogue natives (plugins dialog + fs), à la place des téléchargements du navigateur. Supprimer la limite de 1800 px sur l'image source (la rendre réglable).
 2. **Aperçu sur la carte graphique (WebGL2)** : shaders pour le halftone (points, lignes, CMJN), atlas de glyphes pour les caractères, composition (dégradé, détourage, lueur, effets d'écran) en shaders. Le rendu canvas 2D reste en secours si WebGL2 n'est pas disponible. Exports PNG haute définition rendus par le GPU.
 3. **Confort** : calculs lourds dans des Web Workers, sauvegarde / ouverture de projets (.json avec réglages + chemin de l'image), préréglages personnels, annuler / rétablir global.
-4. **Vidéo** (plus tard) : import et export via ffmpeg (sidecar Tauri), timeline, images clés sur les réglages, export ProRes 4444 / WebM avec transparence et séquence PNG pour After Effects.
+4. **Vidéo** : d'abord appliquer les effets existants à une vidéo, plan détaillé dans `docs/video.md`. Ensuite : import et export via ffmpeg (sidecar Tauri), timeline, images clés sur les réglages, export ProRes 4444 / WebM avec transparence et séquence PNG pour After Effects.
 5. **Distribution** : icône et nom définitifs, GitHub Actions (`tauri-action`) pour construire Windows et macOS (version universelle).
 
 ## Règles de travail
