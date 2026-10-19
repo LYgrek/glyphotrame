@@ -84,3 +84,16 @@ Phase 1 : les cases cochées sont vérifiées par `npm run compare:ui`, qui joue
 - [x] SVG vectoriel : texte éditable ou formes, dégradé en masques, effets en filtres / motifs
 - [x] Code : HTML + CSS (grille exacte, variable --k), SVG en ligne, texte brut (caractères seulement)
 - [ ] Copier le code, enregistrer le fichier (boîte de dialogue native) — *copie et contenu des 10 fichiers exportés vérifiés (identiques à la référence) ; boîte « Enregistrer » à tester à la main*
+
+## Phase 2 · Rendu sur la carte graphique (WebGL2)
+
+Vérifié par `npm run compare:gpu` (46 réglages types, GPU ↔ canvas 2D) et `npm run compare:ui -- --gpu` (228 vérifications face à la référence). Voir `docs/notes.md`.
+
+- [x] Halftone : points (9 formes, grilles, désordre), lignes, pointillisme, CMJN
+- [x] Caractères : atlas de glyphes, pixels identiques au rendu canvas (placement et contraste du texte reproduits)
+- [x] Composition : dégradés droit / vague / courbe libre, détourage, fond transparent
+- [x] Néon & écran : lueur, aberration chromatique, grille, balayage, vignettage, grain
+- [x] Exports PNG / JPEG rendus par la carte graphique (par tuiles, jusqu'à 4×)
+- [x] Rendu canvas 2D en secours : choix dans la section Sortie, retour automatique si WebGL2 manque ou si la carte graphique décroche
+- [x] Exports SVG / HTML toujours calculés par le moteur JavaScript
+- [ ] Vérifié à l'œil dans la fenêtre Tauri : passage Carte graphique ↔ Canvas 2D, export PNG 4× enregistré par la boîte de dialogue — *rendu GPU, retour au GPU et export 4× (9 600 × 9 600 px, 5 s) vérifiés à distance dans WebView2*

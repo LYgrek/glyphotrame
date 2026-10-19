@@ -39,6 +39,30 @@ et en fin de section, des captures d'écran de chaque section du panneau, de l'e
 
 Non couvert (fenêtres natives) : boîtes Ouvrir / Enregistrer de Windows et glisser-déposer de Tauri, à tester à la main dans `npm run tauri dev`.
 
+## Rendu sur la carte graphique (phase 2)
+
+Le moteur JavaScript calcule toujours la grille (points, glyphes, couleurs) ; `src/gpu/` ne fait que le dessin et la composition. L'aperçu GPU montre donc la même géométrie que l'export SVG. Les exports SVG et HTML restent calculés par le moteur.
+
+- **Halftone** : une instance par point, forme calculée par distance signée avec les sommets du moteur ; formes de moins de 12 px de rayon mesurées sur 4 × 4 sous-échantillons. Lignes : maillage, anticrénelage multi-échantillonné (8×). CMJN : couverture de chaque encre, puis pose en produit (formule du `multiply` du canvas).
+- **Caractères** : atlas dessiné par le canvas 2D. Deux particularités du texte du navigateur sont mesurées à l'exécution et reproduites : le placement (quart de pixel en x, avec un seuil propre à chaque glyphe ; pixel entier en y) et le contraste de l'anticrénelage, qui dépend de la couleur du texte (couleur arrondie à 3 bits par composante → 8 niveaux). Résultat : pixels identiques au rendu canvas.
+- **Composition** : fond, photo, dégradé (droite : masques interpolés entre les points du dégradé, comme le canvas et le SVG ; vague : calculée pour chaque pixel ; courbe libre : champ du moteur), lueur (réduction, flou σ 1,2, agrandissement), puis aberration, grille, balayage, vignettage et grain avec les formules de composition du canvas.
+- **Exports PNG / JPEG** : rendus par tuiles de 2048 px avec marges (lueur, aberration) ; 9 600 × 9 600 px en 5 s dans Tauri.
+- **Secours** : choix « Carte graphique / Canvas 2D » (section Sortie) ; retour automatique au canvas 2D si WebGL2 manque ou si le contexte graphique est perdu ; `?rendu=canvas` dans l'adresse force le canvas.
+
+### Vérifier le rendu GPU
+
+```powershell
+npm run compare:gpu                 # GPU ↔ canvas 2D sur les réglages types (aperçu + export 2× par tuiles, temps)
+npm run compare:ui -- --gpu         # interface complète en mode GPU face à la référence
+node tools/compare-headless.mjs compare-gpu.html --gpu --save   # + images des écarts dans tools/.gpu-diff/
+```
+
+Les deux rendus ne peuvent pas être identiques au bit près : on mesure l'écart moyen (valeurs prémultipliées, 0-255) et la part de pixels écartés de plus de 48 niveaux. Seuils : 1,5 et 0,5 % (`compare:gpu`) ; 2,5 et 1,5 % (`compare:ui -- --gpu`). Tolérances plus larges, justifiées dans `tools/compare-gpu.js` : lignes en couleurs (le canvas laisse des coutures entre segments), CMJN (quatre encres, quatre fois plus de bords), trame très fine.
+
+**Pourquoi un écart subsiste sur les petites formes** : le canvas de Chrome déborde de la surface exacte (au coin d'un carré il prend le minimum des deux couvertures au lieu de leur produit ; un cercle de 3,5 px couvre 7 % de trop, un point de 0,6 px 36 %). Le GPU respecte la surface exacte, comme les logiciels vectoriels qui ouvrent le SVG. C'est visible surtout sur fond transparent et sur les trames très fines.
+
+Mesures : aperçu des 46 réglages types en 0,7 s au lieu de 3,3 s ; trame de 4 px en 2400 px de large : 58 ms au lieu de 660 ms.
+
 ## Rendu logiciel ou accéléré
 
 Le résultat dépend légèrement du rendu canvas : avec la carte graphique (WebView2 dans Tauri, navigateur normal), l'image d'exemple donne 7 975 glyphes ; en rendu logiciel (`npm run compare`, Edge sans carte graphique), 7 966. La référence et l'application donnent toujours le même chiffre dans le même environnement : ce n'est pas un écart du portage.

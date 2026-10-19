@@ -54,7 +54,13 @@ src/
     render.js       calcul de la grille et composition canvas 2D (aperçu, PNG, JPEG)
     export-svg.js   export SVG vectoriel (masques, filtres, motifs)
     export-html.js  export HTML + CSS, texte brut
-  gpu/          rendu WebGL2 de l'aperçu (phase 2)
+  gpu/          rendu WebGL2 de l'aperçu et des exports PNG / JPEG (phase 2)
+    index.js        point d'entrée : createGpuRenderer, gpuRenderBlob
+    renderer.js     calque de l'effet, lueur, composition, effets d'écran ; exports par tuiles
+    shaders.js      shaders GLSL ES 3.00 (formes, lignes, encres, glyphes, flou, composition, écran)
+    halftone.js     instances (points) et maillages (lignes) depuis les éléments du moteur
+    glyphs.js       atlas de glyphes (placement et contraste du texte du navigateur, mesurés)
+    gl.js           outils WebGL2 (programmes, textures, cibles de rendu)
   ui/           composants (un fichier CSS par composant, classes identiques à la référence)
     controls/       curseur, boutons segmentés, cases, interrupteur, couleur
     panel/          colonne de réglages, une section par bloc, éditeur de courbe
@@ -62,7 +68,7 @@ src/
     Header, CodeSheet, Toast
 src-tauri/      côté Rust : plugins dialog + fs, configuration de la fenêtre
 reference/      version HTML d'origine (ne pas modifier)
-tools/          bancs de comparaison avec la référence (`npm run compare`, `npm run compare:ui`), hors application
+tools/          bancs de comparaison (`npm run compare`, `compare:ui`, `compare:gpu`), hors application
 docs/           fonctionnalités, notes
 ```
 
@@ -82,7 +88,7 @@ Principes :
 ## Règles de travail
 
 - Avancer par **petites étapes vérifiables**. Après chaque étape : lancer `npm run tauri dev`, vérifier, et comparer avec `reference/glyphotrame-reference.html`.
-- Après toute modification de `src/engine/` : `npm run compare` doit rester entièrement vert ; après toute modification de l'interface : `npm run compare:ui` (voir `docs/notes.md`).
+- Après toute modification de `src/engine/` : `npm run compare` doit rester entièrement vert ; après toute modification de l'interface : `npm run compare:ui` (et `npm run compare:ui -- --gpu`) ; après toute modification de `src/gpu/` : `npm run compare:gpu` (voir `docs/notes.md`).
 - Cocher l'avancement dans `docs/fonctionnalites.md`.
 - Faire un commit git à chaque étape qui fonctionne, avec un message en français.
 - Textes de l'interface, messages d'erreur et commentaires en français.

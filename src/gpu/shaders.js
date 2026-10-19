@@ -70,8 +70,9 @@ float dist(vec2 p) {
 void main() {
   vec2 dx = dFdx(v_local), dy = dFdy(v_local);
   float a;
-  if (v_px * u_extent < 4.0) {
-    // petite forme (quelques pixels) : couverture réelle, mesurée sur 4 × 4 sous-échantillons
+  if (v_px * u_extent < 12.0) {
+    // petite forme (moins de 12 px de rayon) : couverture réelle, mesurée sur 4 × 4 sous-échantillons
+    // (la distance au bord seule arrondit les coins des polygones et perd de la surface)
     a = 0.0;
     for (int i = 0; i < 4; i++) for (int j = 0; j < 4; j++) {
       vec2 o = (vec2(i, j) - 1.5) / 4.0;

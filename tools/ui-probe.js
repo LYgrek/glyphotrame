@@ -105,7 +105,9 @@ window.T = {
     return c.width + '×' + c.height + ' ' + (h >>> 0).toString(16);
   },
   // écart (valeurs prémultipliées) entre deux images : canvas ou adresse data: d'une image
-  async cmp(a, b, maxMean = 1.5, maxVisible = 1.5) {
+  // tolérance du rendu GPU : le canvas de Chrome déborde de la surface exacte des petites formes
+  // (coins des carrés, petits cercles : jusqu'à +7 % pour un point de 3,5 px), le GPU la respecte
+  async cmp(a, b, maxMean = 2.5, maxVisible = 1.5) {
     const load = async (s) => {
       if (typeof s !== 'string') return T.pixels(document.querySelector(s.sel));
       const img = await new Promise((r) => { const i = new Image(); i.onload = () => r(i); i.src = s; });
