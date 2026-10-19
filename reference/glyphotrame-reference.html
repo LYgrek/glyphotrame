@@ -1,0 +1,2731 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>html,body{margin:0}</style>
+</head>
+<body>
+<title>Glyphotrame</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@100..900&family=Fraunces:opsz,wght@9..144,100..900&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* Layout: établi — colonne de réglages à gauche, feuille d'impression (aperçu) à droite, exports en tête */
+:root{
+  --paper:#e9ecf0; --panel:#f8f9fb; --well:#dde2e9; --dot:#c3cad5;
+  --line:#d3d8e0; --ink:#14161b; --muted:#5a6270;
+  --accent:#2336d1; --accent-ink:#ffffff; --accent-soft:#e3e6fb;
+  --scrim:rgba(18,20,26,.45); --shadow:rgba(20,24,40,.22);
+  --f-ui:"Archivo",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-display:"Fraunces",Georgia,"Times New Roman",serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --paper:#101217; --panel:#171a20; --well:#0b0d11; --dot:#232833;
+    --line:#282d37; --ink:#e7e9ef; --muted:#98a0ae;
+    --accent:#8a97ff; --accent-ink:#0c0e14; --accent-soft:#1f2442;
+    --scrim:rgba(0,0,0,.6); --shadow:rgba(0,0,0,.55);
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#101217; --panel:#171a20; --well:#0b0d11; --dot:#232833;
+  --line:#282d37; --ink:#e7e9ef; --muted:#98a0ae;
+  --accent:#8a97ff; --accent-ink:#0c0e14; --accent-soft:#1f2442;
+  --scrim:rgba(0,0,0,.6); --shadow:rgba(0,0,0,.55);
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{height:100%}
+body{background:var(--paper);color:var(--ink);font:400 14px/1.45 var(--f-ui)}
+button,input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+.app{display:flex;flex-direction:column;gap:12px;min-height:100%;padding-inline:16px;padding-block:14px 20px}
+
+/* En-tête */
+.bar{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px 20px}
+.brand{display:flex;align-items:center;gap:12px;min-width:0}
+.mark{flex:none;width:46px;height:46px;border-radius:8px;background:var(--ink);color:var(--paper);display:grid;grid-template-columns:repeat(3,1fr);place-items:center;padding:6px;font:500 11px/1 var(--f-mono)}
+.brand h1{margin:0;font:600 28px/1 var(--f-display);font-variation-settings:"opsz" 96;letter-spacing:-.015em}
+.brand p{margin:4px 0 0;color:var(--muted);font-size:13px}
+.exports{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
+.exports .lbl{font:600 11px/1 var(--f-ui);letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-right:4px}
+
+.btn{display:inline-flex;align-items:center;gap:6px;padding:9px 14px;border-radius:6px;border:1px solid var(--line);background:var(--panel);font-weight:500;font-size:13px;line-height:1;cursor:pointer}
+.btn:hover{border-color:var(--ink)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.primary:hover{filter:brightness(1.08)}
+.btn.small{padding:7px 10px;font-size:12px}
+
+/* Établi */
+.work{display:grid;grid-template-columns:330px minmax(0,1fr);gap:12px;flex:1;min-height:0}
+.controls{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:0 16px;overflow:auto;max-height:calc(100vh - 110px);min-width:0}
+.group{display:flex;flex-direction:column;gap:14px;padding-block:16px;border-bottom:1px solid var(--line)}
+.group:last-child{border-bottom:0}
+.group h2{margin:0;font:600 11px/1 var(--f-ui);letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+
+.field{display:flex;flex-direction:column;gap:6px;min-width:0}
+.field .row{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.field label,.field .name{font-weight:500}
+.field .term{color:var(--muted);font-weight:400;font-style:italic;font-family:var(--f-display);margin-left:4px}
+.hint{color:var(--muted);font-size:12px;margin:0}
+output{font:500 12px/1 var(--f-mono);font-variant-numeric:tabular-nums;white-space:nowrap}
+input[type=range]{width:100%;margin:0;accent-color:var(--accent);height:20px}
+
+.seg{display:grid;grid-template-columns:1fr 1fr;gap:4px;padding:4px;background:var(--well);border-radius:8px}
+.seg button{border:0;background:transparent;border-radius:5px;padding:8px 6px;cursor:pointer;font-size:13px;font-weight:500;color:var(--muted)}
+.seg button[aria-pressed="true"]{background:var(--panel);color:var(--ink);box-shadow:0 1px 2px var(--shadow)}
+.seg.fonts button{display:flex;align-items:center;gap:10px;text-align:left;padding:8px 10px}
+.seg.fonts .spec{font-size:28px;line-height:1;width:40px;text-align:center}
+.seg.fonts .spec.sans{font-family:"Archivo",sans-serif;font-weight:600}
+.seg.fonts .spec.serif{font-family:"Fraunces",serif;font-weight:600}
+.seg.fonts small{display:block;font-size:11px;font-weight:400;color:var(--muted)}
+
+.drop{display:flex;flex-direction:column;align-items:center;gap:4px;text-align:center;padding:18px 12px;border:1.5px dashed var(--line);border-radius:8px;cursor:pointer;background:var(--paper)}
+.drop:hover,.drop.over{border-color:var(--accent);background:var(--accent-soft)}
+.drop strong{font-weight:600}
+.drop span{font-size:12px;color:var(--muted)}
+.drop input{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none}
+.srcrow{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.srcname{font:12px var(--f-mono);color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+
+select,.textin{width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:6px;background:var(--paper)}
+.textin{font:500 14px/1.3 var(--f-mono);letter-spacing:.08em}
+.check{display:flex;align-items:flex-start;gap:8px;cursor:pointer;font-size:13px}
+.check input{margin:2px 0 0;accent-color:var(--accent);flex:none}
+
+.swatches{display:flex;flex-wrap:wrap;gap:6px}
+.swatch{display:flex;align-items:center;gap:6px;padding:4px 8px 4px 4px;border:1px solid var(--line);border-radius:20px;background:var(--paper);cursor:pointer;font-size:12px}
+.swatch:hover{border-color:var(--ink)}
+.swatch i{width:22px;height:22px;border-radius:50%;display:grid;place-items:center;font:600 11px/1 var(--f-mono);font-style:normal;border:1px solid var(--line)}
+.colors{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.colorfield{display:flex;align-items:center;gap:8px;padding:6px 8px;border:1px solid var(--line);border-radius:6px;background:var(--paper)}
+.colorfield input[type=color]{width:28px;height:28px;border:0;padding:0;background:none;cursor:pointer;flex:none}
+.colorfield span{display:flex;flex-direction:column;font-size:12px;line-height:1.2;min-width:0}
+.colorfield code{font:11px var(--f-mono);color:var(--muted)}
+.colorfield.off{opacity:.45}
+
+/* Détourage */
+.switch{display:flex;align-items:center;justify-content:space-between;gap:10px;cursor:pointer;font-weight:500}
+.switch input{appearance:none;-webkit-appearance:none;flex:none;width:38px;height:22px;border-radius:11px;background:var(--line);position:relative;cursor:pointer;margin:0}
+.switch input::after{content:"";position:absolute;top:3px;left:3px;width:16px;height:16px;border-radius:50%;background:var(--panel);box-shadow:0 1px 2px var(--shadow)}
+.switch input:checked{background:var(--accent)}
+.switch input:checked::after{left:19px}
+.cutbox{display:flex;flex-direction:column;gap:14px}
+.cutbox[aria-disabled="true"]{opacity:.45;pointer-events:none}
+.cutcolor{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.cutcolor .colorfield{flex:1;min-width:130px}
+.btn[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.colorfield em{font-style:normal}
+.dirrow{display:flex;align-items:center;gap:12px}
+.dirrow .hint{min-width:0}
+.compass{flex:none;display:grid;grid-template-columns:repeat(3,32px);grid-template-rows:repeat(3,32px);gap:3px;padding:4px;background:var(--well);border-radius:8px}
+.compass button{border:0;border-radius:5px;background:transparent;color:var(--muted);font:500 15px/1 var(--f-mono);cursor:pointer}
+.compass button:hover{background:var(--panel);color:var(--ink)}
+.compass button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink)}
+.seg.three{grid-template-columns:repeat(3,1fr)}
+.seg.modes{grid-template-columns:none;grid-auto-flow:column;grid-auto-columns:1fr}
+.colors.three{grid-template-columns:repeat(3,1fr);gap:6px}
+.colors.three .colorfield{padding:6px;gap:6px}
+.colors.three .colorfield input[type=color]{width:22px;height:22px}
+.neon-presets{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.neon-presets button{display:flex;flex-direction:column;gap:5px;padding:5px;border:1px solid var(--line);border-radius:6px;background:var(--paper);cursor:pointer;font-size:11px;text-align:left;color:var(--muted)}
+.neon-presets button i{display:block;height:16px;border-radius:3px}
+.neon-presets button:hover{border-color:var(--ink)}
+.neon-presets button[aria-pressed="true"]{border-color:var(--accent);color:var(--ink);box-shadow:0 0 0 1px var(--accent)}
+.neon-presets button:last-child{grid-column:1/-1}
+.neon-bar{height:10px;border-radius:5px;border:1px solid var(--line)}
+.fxpreset{justify-content:center;width:100%;padding:11px 14px}
+
+/* Choix de l'effet */
+.seg.effects button{display:flex;align-items:center;gap:10px;text-align:left;padding:9px 10px;color:var(--ink)}
+.seg.effects button[aria-pressed="false"]{color:var(--muted)}
+.seg.effects small{display:block;font-size:11px;font-weight:400;color:var(--muted)}
+.fx-ico{flex:none;width:34px;height:34px;border-radius:6px;background:var(--ink);color:var(--paper);display:grid;place-items:center}
+.fx-ico.chars{font:600 11px/1.05 var(--f-mono);text-align:center}
+.fx-ico.dots{background:var(--ink) radial-gradient(circle,var(--paper) 0 30%,transparent 33%) 0 0/7px 7px}
+.seg.effects button[aria-pressed="false"] .fx-ico{opacity:.55}
+
+/* Formes halftone */
+.shapes{display:grid;grid-template-columns:repeat(auto-fill,minmax(54px,1fr));gap:4px}
+.shapes button{display:flex;flex-direction:column;align-items:center;gap:3px;padding:7px 2px 5px;border:1px solid var(--line);border-radius:6px;background:var(--paper);cursor:pointer;font-size:10.5px;color:var(--muted)}
+.shapes button svg{width:20px;height:20px;fill:currentColor;color:var(--ink)}
+.shapes button:hover{border-color:var(--ink)}
+.shapes button[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft);color:var(--ink)}
+.shapes button[aria-pressed="true"] svg{color:var(--accent)}
+.btnrow{display:flex;flex-wrap:wrap;gap:6px}
+
+/* Éditeur de courbe de progression */
+.curve-editor{border:1px solid var(--line);border-radius:8px;background:var(--paper);padding:6px}
+.curve-editor svg{display:block;width:100%;height:auto;touch-action:none;user-select:none}
+.ce-bg{fill:var(--panel);stroke:var(--line)}
+.ce-grid{stroke:var(--line);stroke-width:.6;fill:none}
+.ce-arm{stroke:var(--muted);stroke-width:1;stroke-dasharray:3 2}
+.ce-curve{fill:none;stroke:var(--accent);stroke-width:2.5;stroke-linecap:round}
+.ce-end{fill:var(--accent)}
+.ce-handle{fill:var(--panel);stroke:var(--accent);stroke-width:2.5;cursor:grab}
+.ce-handle:hover,.ce-handle:focus-visible{fill:var(--accent-soft);outline:none;stroke-width:3.5}
+.ce-handle.drag{cursor:grabbing;fill:var(--accent)}
+.ce-lbl{font:500 8.5px var(--f-ui);fill:var(--muted)}
+.presets{display:flex;flex-wrap:wrap;gap:4px}
+.presets button{padding:6px 9px;border:1px solid var(--line);border-radius:14px;background:var(--paper);font-size:12px;cursor:pointer}
+.presets button:hover{border-color:var(--ink)}
+.presets button[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+
+/* Courbe libre sur l'aperçu */
+.cwrap{position:relative;width:fit-content;max-width:100%;line-height:0}
+.curve-ui{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;overflow:hidden}
+/* Tracé plume (couleurs fixes : lisibles sur n'importe quelle image) */
+.cu-ext{fill:none;stroke:#1e8bff;stroke-width:1;stroke-dasharray:3 4;stroke-opacity:.7;vector-effect:non-scaling-stroke}
+.cu-under{fill:none;stroke:#fff;stroke-width:3.5;stroke-opacity:.8;vector-effect:non-scaling-stroke}
+.cu-line{fill:none;stroke:#1e8bff;stroke-width:1.6;vector-effect:non-scaling-stroke}
+.cu-rubber{fill:none;stroke:#1e8bff;stroke-width:1.2;stroke-dasharray:4 3;vector-effect:non-scaling-stroke}
+.cu-arms{fill:none;stroke:#1e8bff;stroke-width:1;vector-effect:non-scaling-stroke}
+.curve-handles{position:absolute;inset:0;pointer-events:none}
+.pen-anchor,.pen-knob{position:absolute;padding:0;pointer-events:auto;touch-action:none;box-shadow:0 0 0 1px rgba(255,255,255,.8)}
+.pen-anchor{width:11px;height:11px;margin:-5.5px 0 0 -5.5px;background:#fff;border:1.5px solid #1e8bff;border-radius:1px;cursor:move}
+.pen-anchor.smooth{border-radius:50%}
+.pen-anchor.sel{background:#1e8bff}
+.pen-anchor.first{width:13px;height:13px;margin:-6.5px 0 0 -6.5px}
+.pen-knob{width:9px;height:9px;margin:-4.5px 0 0 -4.5px;border-radius:50%;background:#1e8bff;border:1.5px solid #fff;cursor:pointer}
+.pen-anchor:focus-visible,.pen-knob:focus-visible{outline:2px solid #ffb800;outline-offset:2px}
+.cwrap.pen-on{cursor:crosshair;touch-action:none}
+.cwrap.pen-on.tool-select{cursor:default}
+.cwrap.tool-del .pen-anchor{cursor:not-allowed}
+.cwrap.tool-convert .pen-anchor{cursor:crosshair}
+.cwrap.near-first .pen-anchor.first{box-shadow:0 0 0 3px #ffb800}
+.viewport[data-view="wipe"] .curve-ui,.viewport[data-view="wipe"] .curve-handles{display:none}
+
+/* Barre d'outils plume */
+.penbar{display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px;padding:8px 14px;border-bottom:1px solid var(--line);background:var(--paper)}
+.pentools,.penactions{display:flex;gap:3px;padding:3px;background:var(--well);border-radius:8px}
+.pentools button,.penactions button{display:flex;align-items:center;gap:6px;border:0;background:transparent;border-radius:5px;padding:6px 9px;cursor:pointer;color:var(--muted);font-size:12px;font-weight:500}
+.pentools button svg,.penactions button svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.4;stroke-linejoin:round;stroke-linecap:round}
+.pentools button[aria-pressed="true"]{background:var(--panel);color:var(--ink);box-shadow:0 1px 2px var(--shadow)}
+.pentools button:hover,.penactions button:hover:not(:disabled){color:var(--ink)}
+.penactions button:disabled{opacity:.35;cursor:default}
+.penhint{margin:0;font-size:12px;line-height:1.4;color:var(--muted);flex:1;min-width:180px;height:2.8em;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+@media (max-width:700px){.pentools button span{display:none}}
+.keys{font-size:12px;color:var(--muted)}
+.keys summary{cursor:pointer;font-weight:500;color:var(--ink)}
+.keys ul{margin:8px 0 0;padding-left:16px;display:flex;flex-direction:column;gap:5px}
+kbd{font:500 11px var(--f-mono);padding:1px 5px;border:1px solid var(--line);border-bottom-width:2px;border-radius:4px;background:var(--panel);color:var(--ink)}
+.cutthumb{display:flex;justify-content:center;padding:8px;border:1px solid var(--line);border-radius:8px;background:var(--paper)}
+.cutthumb canvas{display:block;max-width:100%;max-height:160px;width:auto;height:auto;background:repeating-conic-gradient(#d9d9d9 0 25%,#ffffff 0 50%) 0 0/12px 12px}
+canvas.picking{cursor:crosshair}
+@media (prefers-reduced-motion:no-preference){.switch input::after{transition:left .15s}}
+
+/* Aperçu */
+.stage{display:flex;flex-direction:column;background:var(--panel);border:1px solid var(--line);border-radius:10px;min-width:0;min-height:420px;overflow:hidden}
+.stage-head{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:8px 16px;padding:10px 14px;border-bottom:1px solid var(--line)}
+.stats{font:12px/1.4 var(--f-mono);color:var(--muted);font-variant-numeric:tabular-nums;min-width:0}
+.stats b{color:var(--ink);font-weight:500}
+.stats .warn{color:#b4531a}
+.stage-head .seg{grid-template-columns:auto auto}
+.stage-head .seg button{padding:5px 10px;font-size:12px}
+.viewport{position:relative;flex:1;display:grid;place-items:center;padding:24px;overflow:auto;background-color:var(--well);background-image:radial-gradient(var(--dot) 1px,transparent 1.2px);background-size:14px 14px}
+.viewport.actual{place-items:start}
+.viewport canvas{display:block;box-shadow:0 1px 2px var(--shadow),0 18px 40px -18px var(--shadow)}
+.viewport.fit canvas{max-width:100%;max-height:calc(100vh - 200px);width:auto;height:auto}
+
+/* Avant / après */
+.stage-tools{display:flex;flex-wrap:wrap;gap:8px}
+.stage-head .seg.views{grid-template-columns:auto auto auto}
+.compare{position:relative;width:fit-content;max-width:100%;--x:50%}
+.viewport.actual .compare{max-width:none}
+.pane{margin:0;min-width:0}
+.pane figcaption{display:none;font:600 11px/1 var(--f-ui);letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:8px}
+.pane canvas.orig{background:repeating-conic-gradient(#d9d9d9 0 25%,#ffffff 0 50%) 0 0/16px 16px}
+.wipe-handle,.wipe-range{display:none}
+
+.viewport[data-view="result"] .pane.before{display:none}
+
+.viewport[data-view="side"] .compare{display:flex;gap:20px;align-items:flex-start;justify-content:center;width:100%}
+.viewport.actual[data-view="side"] .compare{width:max-content}
+.viewport[data-view="side"] .pane{flex:0 1 auto;display:flex;flex-direction:column;align-items:center}
+.viewport.fit[data-view="side"] .pane{flex:1 1 0}
+.viewport[data-view="side"] .pane figcaption{display:block}
+.viewport.fit[data-view="side"] canvas{max-height:calc(100vh - 230px)}
+
+.viewport.fit[data-view="wipe"] .pane.after canvas{max-height:calc(100vh - 250px)}
+.viewport[data-view="wipe"] .compare{touch-action:pan-y;cursor:ew-resize;user-select:none}
+.viewport[data-view="wipe"] .pane.before{position:absolute;inset:0;z-index:2;clip-path:inset(0 calc(100% - var(--x)) 0 0)}
+.viewport[data-view="wipe"] .pane.before canvas{width:100%;height:100%;max-width:none;max-height:none;box-shadow:none}
+.viewport[data-view="wipe"] .pane figcaption{display:block;position:absolute;top:10px;margin:0;padding:6px 8px;border-radius:4px;background:var(--ink);color:var(--paper);z-index:3}
+.viewport[data-view="wipe"] .pane.before figcaption{left:10px}
+.viewport[data-view="wipe"] .pane.after figcaption{right:10px}
+.viewport[data-view="wipe"] .wipe-handle{display:block;position:absolute;top:0;bottom:0;left:var(--x);width:2px;margin-left:-1px;background:var(--accent);z-index:4;pointer-events:none}
+.wipe-handle::after{content:"‹ ›";position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:34px;height:34px;border-radius:50%;background:var(--accent);color:var(--accent-ink);display:grid;place-items:center;font:600 14px/1 var(--f-mono);box-shadow:0 2px 8px var(--shadow)}
+.viewport[data-view="wipe"] .wipe-range{display:block;width:min(320px,100%);margin-top:14px;accent-color:var(--accent)}
+.viewport[data-view="wipe"] canvas.picking,.viewport[data-view="wipe"] .compare:has(canvas.picking){cursor:crosshair}
+@media (max-width:700px){
+  .viewport[data-view="side"] .compare{flex-direction:column;align-items:center;gap:14px}
+  .viewport.fit[data-view="side"] .pane{flex:none;width:100%}
+  .viewport.fit[data-view="side"] canvas{max-height:45vh}
+}
+canvas.checker{background:repeating-conic-gradient(#d9d9d9 0 25%,#ffffff 0 50%) 0 0/16px 16px}
+.dropveil{position:absolute;inset:10px;border:2px dashed var(--accent);border-radius:10px;background:var(--accent-soft);display:grid;place-items:center;font-weight:600;color:var(--accent);pointer-events:none}
+
+/* Feuille « Code » */
+.sheet{position:fixed;inset:0;background:var(--scrim);display:grid;place-items:center;padding:16px;z-index:10}
+.sheet-card{width:min(920px,100%);max-height:calc(100vh - 32px);display:flex;flex-direction:column;gap:12px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:18px;box-shadow:0 30px 80px -20px var(--shadow);min-width:0}
+.sheet-top{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+.sheet h3{margin:0;font:600 22px/1.1 var(--f-display);font-variation-settings:"opsz" 72}
+.sheet .tabs{display:flex;flex-wrap:wrap;gap:4px;padding:4px;background:var(--well);border-radius:8px;align-self:flex-start}
+.sheet .tabs button{border:0;background:transparent;border-radius:5px;padding:7px 12px;font-size:13px;font-weight:500;color:var(--muted);cursor:pointer}
+.sheet .tabs button[aria-selected="true"]{background:var(--panel);color:var(--ink);box-shadow:0 1px 2px var(--shadow)}
+.sheet textarea{width:100%;min-height:260px;height:46vh;resize:vertical;border:1px solid var(--line);border-radius:8px;background:var(--paper);padding:12px;font:12px/1.5 var(--f-mono);white-space:pre;overflow:auto;overflow-wrap:normal}
+.sheet-foot{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:10px}
+.sheet-foot .hint{max-width:52ch}
+.sheet-foot .actions{display:flex;gap:6px;flex-wrap:wrap}
+
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--paper);padding:10px 16px;border-radius:8px;font-size:13px;max-width:calc(100% - 32px);z-index:20;box-shadow:0 10px 30px -10px var(--shadow)}
+
+@media (max-width:880px){
+  .work{grid-template-columns:1fr}
+  .stage{order:-1;min-height:0}
+  .controls{max-height:none;overflow:visible}
+  .viewport{padding:14px;min-height:260px}
+  .viewport.fit canvas{max-height:60vh}
+}
+@media (prefers-reduced-motion:no-preference){
+  .btn,.seg button,.swatch,.drop{transition:border-color .15s,background-color .15s,filter .15s}
+}
+</style>
+
+<div class="app">
+  <header class="bar">
+    <div class="brand">
+      <div class="mark" aria-hidden="true"><span>@</span><span>%</span><span>:</span><span>#</span><span>+</span><span>.</span><span>=</span><span>-</span><span> </span></div>
+      <div>
+        <h1>Glyphotrame</h1>
+        <p>Trames de caractères et halftone à partir de tes images</p>
+      </div>
+    </div>
+    <div class="exports" role="group" aria-label="Exporter">
+      <span class="lbl">Exporter</span>
+      <button class="btn" id="exPng" type="button">PNG</button>
+      <button class="btn" id="exJpg" type="button">JPEG</button>
+      <button class="btn" id="exSvg" type="button">SVG</button>
+      <button class="btn primary" id="exCode" type="button">&lt;/&gt; Code</button>
+    </div>
+  </header>
+
+  <main class="work">
+    <aside class="controls" aria-label="Réglages">
+      <section class="group">
+        <h2>Effet</h2>
+        <div class="seg effects" role="group" aria-label="Type d'effet">
+          <button type="button" data-effect="chars" aria-pressed="true"><span class="fx-ico chars" aria-hidden="true">#@<br>:.</span><span>Caractères<small>Lettres et signes</small></span></button>
+          <button type="button" data-effect="halftone" aria-pressed="false"><span class="fx-ico dots" aria-hidden="true"></span><span>Halftone<small>Points, lignes, pointillé</small></span></button>
+        </div>
+      </section>
+
+      <section class="group">
+        <h2>Image</h2>
+        <label class="drop" id="dropzone" for="file">
+          <strong>Déposer une image ou cliquer pour choisir</strong>
+          <span>JPEG, PNG, WebP, GIF, SVG · ou coller avec Ctrl+V</span>
+          <input type="file" id="file" accept="image/*">
+        </label>
+        <div class="srcrow">
+          <span class="srcname" id="srcName">exemple-sphere.png</span>
+          <button class="btn small" type="button" id="sampleBtn">Image d'exemple</button>
+        </div>
+        <div class="field">
+          <div class="row"><label for="width">Largeur de sortie</label><output id="o-width" for="width"></output></div>
+          <input type="range" id="width" data-key="width" min="300" max="2400" step="50" value="1200">
+        </div>
+      </section>
+
+      <section class="group">
+        <h2>Détourage</h2>
+        <label class="switch"><span>Supprimer le fond de l'image</span><input type="checkbox" id="cut" role="switch"></label>
+        <div class="cutbox" id="cutbox" aria-disabled="true">
+          <div class="field">
+            <span class="name">Couleur du fond à retirer</span>
+            <div class="cutcolor">
+              <label class="colorfield"><input type="color" id="cutColor" value="#ffffff"><span><em id="cutMode">Détectée</em><code id="cutHex">#ffffff</code></span></label>
+              <button class="btn small" type="button" id="cutAuto">Auto</button>
+              <button class="btn small" type="button" id="cutPick" aria-pressed="false">Pipette</button>
+            </div>
+          </div>
+          <div class="field">
+            <div class="row"><label for="tol">Tolérance</label><output id="o-tol" for="tol"></output></div>
+            <input type="range" id="tol" data-key="tol" min="0" max="100" step="1" value="14">
+          </div>
+          <div class="field">
+            <div class="row"><label for="soft">Adoucir les bords</label><output id="o-soft" for="soft"></output></div>
+            <input type="range" id="soft" data-key="soft" min="0" max="40" step="1" value="8">
+          </div>
+          <label class="check"><input type="checkbox" id="flood" checked><span>Seulement le fond relié aux bords de l'image<br><span class="hint">Garde les zones claires à l'intérieur du sujet (yeux, reflets, gants…)</span></span></label>
+          <div class="cutthumb"><canvas id="cutPreview" width="10" height="10" aria-label="Aperçu du détourage"></canvas></div>
+        </div>
+      </section>
+
+      <section class="group">
+        <h2>Dégradé</h2>
+        <label class="switch"><span>Appliquer l'effet en dégradé</span><input type="checkbox" id="grad" role="switch"></label>
+        <div class="cutbox" id="gradbox" aria-disabled="true">
+          <div class="field">
+            <span class="name">Forme de la frontière</span>
+            <div class="seg three" role="group" aria-label="Forme de la frontière">
+              <button type="button" data-gshape="droite" aria-pressed="true">Droite</button>
+              <button type="button" data-gshape="vague" aria-pressed="false">Vague</button>
+              <button type="button" data-gshape="libre" aria-pressed="false">Courbe libre</button>
+            </div>
+          </div>
+          <div class="field" id="libreFields" hidden>
+            <p class="hint">Dessine sur l'aperçu avec la barre d'outils <b>Plume</b> qui s'affiche au-dessus de l'image, comme dans Photoshop. Un tracé <b>fermé</b> entoure un élément : l'effet s'applique à l'intérieur. Un tracé <b>ouvert</b> coupe l'image : l'effet va du côté gauche du tracé. « Inverser les côtés » fait l'inverse.</p>
+            <div class="btnrow">
+              <button class="btn small primary" type="button" id="penNew">Nouveau tracé</button>
+              <button class="btn small" type="button" id="penClose">Fermer le tracé</button>
+              <button class="btn small" type="button" id="ptReset">Tracé d'exemple</button>
+            </div>
+            <label class="check"><input type="checkbox" id="gShowCurve" checked><span>Afficher le tracé sur l'aperçu</span></label>
+            <details class="keys">
+              <summary>Raccourcis clavier</summary>
+              <ul>
+                <li><kbd>P</kbd> Plume · <kbd>A</kbd> Sélection directe · <kbd>+</kbd> Ajouter · <kbd>−</kbd> Supprimer · <kbd>Maj</kbd>+<kbd>C</kbd> Convertir</li>
+                <li><b>Plume</b> : clic = point d'angle, cliquer-glisser = point courbe. Clic sur le premier point = fermer. Survol du tracé = ajouter, survol d'un point = supprimer.</li>
+                <li><b>Alt</b> en glissant une poignée : casse la symétrie (point d'angle courbé).</li>
+                <li><b>Maj</b> : contraint à 45°. <kbd>Suppr</kbd> retire le point sélectionné. <kbd>Échap</kbd> arrête le tracé. <kbd>Ctrl</kbd>+<kbd>Z</kbd> / <kbd>Ctrl</kbd>+<kbd>Maj</kbd>+<kbd>Z</kbd> annuler / rétablir.</li>
+              </ul>
+            </details>
+          </div>
+          <div class="field" id="dirField">
+            <span class="name" id="dirLabel">Côté de l'effet</span>
+            <div class="dirrow">
+              <div class="compass" role="group" aria-labelledby="dirLabel">
+                <button type="button" data-dir="45" aria-label="En haut à gauche">↖</button>
+                <button type="button" data-dir="90" aria-label="En haut">↑</button>
+                <button type="button" data-dir="135" aria-label="En haut à droite">↗</button>
+                <button type="button" data-dir="0" aria-label="À gauche">←</button>
+                <button type="button" data-dir="radial" aria-label="Au centre (radial)">◎</button>
+                <button type="button" data-dir="180" aria-label="À droite">→</button>
+                <button type="button" data-dir="315" aria-label="En bas à gauche">↙</button>
+                <button type="button" data-dir="270" aria-label="En bas">↓</button>
+                <button type="button" data-dir="225" aria-label="En bas à droite">↘</button>
+              </div>
+              <p class="hint">La flèche indique où l'effet est le plus fort. L'autre côté garde l'image d'origine. Le centre crée un dégradé rond.</p>
+            </div>
+          </div>
+          <div class="field" id="angleField">
+            <div class="row"><label for="gAngle">Angle</label><output id="o-gAngle" for="gAngle"></output></div>
+            <input type="range" id="gAngle" data-key="gAngle" min="0" max="359" step="1" value="45">
+          </div>
+          <div id="waveFields" class="cutbox" hidden>
+            <div class="field">
+              <div class="row"><label for="gAmp">Amplitude de la vague</label><output id="o-gAmp" for="gAmp"></output></div>
+              <input type="range" id="gAmp" data-key="gAmp" min="0" max="100" step="1" value="35">
+            </div>
+            <div class="field">
+              <div class="row"><label for="gFreq">Nombre d'ondulations</label><output id="o-gFreq" for="gFreq"></output></div>
+              <input type="range" id="gFreq" data-key="gFreq" min="0.5" max="12" step="0.5" value="2">
+            </div>
+            <div class="field">
+              <div class="row"><label for="gPhase">Décalage de la vague</label><output id="o-gPhase" for="gPhase"></output></div>
+              <input type="range" id="gPhase" data-key="gPhase" min="0" max="360" step="5" value="0">
+            </div>
+          </div>
+          <div class="field" id="posField">
+            <div class="row"><label for="gPos">Position de la transition</label><output id="o-gPos" for="gPos"></output></div>
+            <input type="range" id="gPos" data-key="gPos" min="0" max="100" step="1" value="50">
+          </div>
+          <div class="field">
+            <div class="row"><label for="gSoft">Largeur du fondu</label><output id="o-gSoft" for="gSoft"></output></div>
+            <input type="range" id="gSoft" data-key="gSoft" min="0" max="100" step="1" value="45">
+          </div>
+          <div class="field">
+            <span class="name" id="curveLabel">Courbe de progression</span>
+            <div class="curve-editor">
+              <svg id="curveEd" viewBox="0 0 200 124" role="group" aria-labelledby="curveLabel">
+                <rect class="ce-bg" x="14" y="10" width="172" height="90" rx="3"/>
+                <path class="ce-grid" d="M57 10V100M100 10V100M143 10V100M14 32.5H186M14 55H186M14 77.5H186"/>
+                <line class="ce-arm" id="ceArm1"/>
+                <line class="ce-arm" id="ceArm2"/>
+                <path class="ce-curve" id="ceCurve"/>
+                <circle class="ce-end" cx="14" cy="10" r="3.5"/>
+                <circle class="ce-end" cx="186" cy="100" r="3.5"/>
+                <circle class="ce-handle" id="ceH1" r="7" tabindex="0" role="slider" aria-label="Poignée 1 de la courbe" aria-valuetext=""/>
+                <circle class="ce-handle" id="ceH2" r="7" tabindex="0" role="slider" aria-label="Poignée 2 de la courbe" aria-valuetext=""/>
+                <text class="ce-lbl" x="14" y="116">Effet</text>
+                <text class="ce-lbl" x="186" y="116" text-anchor="end">Original</text>
+                <text class="ce-lbl" x="100" y="116" text-anchor="middle">transition →</text>
+              </svg>
+            </div>
+            <div class="presets" role="group" aria-label="Courbes prédéfinies">
+              <button type="button" data-curve="douce">Douce</button>
+              <button type="button" data-curve="lineaire">Linéaire</button>
+              <button type="button" data-curve="persistante">Effet persistant</button>
+              <button type="button" data-curve="breve">Effet bref</button>
+            </div>
+            <p class="hint">Hauteur = intensité de l'effet. Glisse les deux poignées pour régler la vitesse du fondu.</p>
+          </div>
+          <div class="field">
+            <span class="name">Transition</span>
+            <div class="seg" role="group" aria-label="Style de transition">
+              <button type="button" data-gstyle="superpose" aria-pressed="true">Effet sur la photo</button>
+              <button type="button" data-gstyle="fondu" aria-pressed="false">Fondu simple</button>
+            </div>
+          </div>
+          <label class="check"><input type="checkbox" id="gInvert"><span>Inverser les côtés</span></label>
+        </div>
+      </section>
+
+      <section class="group" data-for="halftone" hidden>
+        <h2>Trame halftone</h2>
+        <div class="seg three" role="group" aria-label="Type de trame">
+          <button type="button" data-httype="points" aria-pressed="true">Points</button>
+          <button type="button" data-httype="lignes" aria-pressed="false">Lignes</button>
+          <button type="button" data-httype="pointillisme" aria-pressed="false">Pointillisme</button>
+        </div>
+        <div class="field" id="htShapeField">
+          <span class="name" id="shapeLabel">Forme des points</span>
+          <div class="shapes" role="group" aria-labelledby="shapeLabel">
+            <button type="button" data-htshape="rond" aria-pressed="true" title="Rond"><svg viewBox="-10 -10 20 20" aria-hidden="true"><circle r="7"/></svg><span>Rond</span></button>
+            <button type="button" data-htshape="carre" aria-pressed="false" title="Carré"><svg viewBox="-10 -10 20 20" aria-hidden="true"><rect x="-6" y="-6" width="12" height="12"/></svg><span>Carré</span></button>
+            <button type="button" data-htshape="losange" aria-pressed="false" title="Losange"><svg viewBox="-10 -10 20 20" aria-hidden="true"><path d="M0-8L8 0 0 8-8 0Z"/></svg><span>Losange</span></button>
+            <button type="button" data-htshape="ellipse" aria-pressed="false" title="Ellipse"><svg viewBox="-10 -10 20 20" aria-hidden="true"><ellipse rx="8.5" ry="4.5"/></svg><span>Ellipse</span></button>
+            <button type="button" data-htshape="triangle" aria-pressed="false" title="Triangle"><svg viewBox="-10 -10 20 20" aria-hidden="true"><path d="M0-8L7.5 5.5-7.5 5.5Z"/></svg><span>Triangle</span></button>
+            <button type="button" data-htshape="hexagone" aria-pressed="false" title="Hexagone"><svg viewBox="-10 -10 20 20" aria-hidden="true"><path d="M7.5 0L3.75 6.5-3.75 6.5-7.5 0-3.75-6.5 3.75-6.5Z"/></svg><span>Hexagone</span></button>
+            <button type="button" data-htshape="croix" aria-pressed="false" title="Croix"><svg viewBox="-10 -10 20 20" aria-hidden="true"><path d="M-2.5-8h5v5.5h5.5v5h-5.5v5.5h-5v-5.5h-5.5v-5h5.5Z"/></svg><span>Croix</span></button>
+            <button type="button" data-htshape="etoile" aria-pressed="false" title="Étoile"><svg viewBox="-10 -10 20 20" aria-hidden="true"><path d="M0-8.5L2.4-3.3 8.1-2.6 3.9 1.3 5 7 0 4.2-5 7-3.9 1.3-8.1-2.6-2.4-3.3Z"/></svg><span>Étoile</span></button>
+            <button type="button" data-htshape="tiret" aria-pressed="false" title="Tiret"><svg viewBox="-10 -10 20 20" aria-hidden="true"><rect x="-8.5" y="-3" width="17" height="6"/></svg><span>Tiret</span></button>
+          </div>
+        </div>
+        <div class="field" id="htGridField">
+          <span class="name">Grille</span>
+          <div class="seg" role="group" aria-label="Grille">
+            <button type="button" data-htgrid="carree" aria-pressed="true">Carrée</button>
+            <button type="button" data-htgrid="hexa" aria-pressed="false">Hexagonale</button>
+          </div>
+        </div>
+        <div class="field">
+          <div class="row"><label for="htCell">Taille de la trame<span class="term">linéature</span></label><output id="o-htCell" for="htCell"></output></div>
+          <input type="range" id="htCell" data-key="htCell" min="3" max="60" step="1" value="12">
+        </div>
+        <div class="field" id="htAngleField">
+          <div class="row"><label for="htAngle">Angle de la trame</label><output id="o-htAngle" for="htAngle"></output></div>
+          <input type="range" id="htAngle" data-key="htAngle" min="0" max="180" step="1" value="45">
+        </div>
+        <div class="field">
+          <div class="row"><label for="htMax" id="htMaxLabel">Taille maximale</label><output id="o-htMax" for="htMax"></output></div>
+          <input type="range" id="htMax" data-key="htMax" min="10" max="160" step="1" value="120">
+        </div>
+        <div class="field" id="htMinField">
+          <div class="row"><label for="htMin">Taille minimale</label><output id="o-htMin" for="htMin"></output></div>
+          <input type="range" id="htMin" data-key="htMin" min="0" max="80" step="1" value="0">
+        </div>
+        <div class="field" id="htJitField">
+          <div class="row"><label for="htJit">Désordre</label><output id="o-htJit" for="htJit"></output></div>
+          <input type="range" id="htJit" data-key="htJit" min="0" max="100" step="1" value="0">
+        </div>
+        <div id="htWaveFields" class="cutbox" hidden>
+          <div class="field">
+            <div class="row"><label for="htAmp">Ondulation des lignes</label><output id="o-htAmp" for="htAmp"></output></div>
+            <input type="range" id="htAmp" data-key="htAmp" min="0" max="100" step="1" value="0">
+          </div>
+          <div class="field">
+            <div class="row"><label for="htFreq">Nombre d'ondulations</label><output id="o-htFreq" for="htFreq"></output></div>
+            <input type="range" id="htFreq" data-key="htFreq" min="0.5" max="30" step="0.5" value="6">
+          </div>
+        </div>
+        <label class="check" id="htVarField" hidden><input type="checkbox" id="htVar" checked><span>Points plus gros dans les zones sombres</span></label>
+        <p class="hint" id="htCmykHint" hidden>En CMJN, chaque encre a son propre angle (cyan 15°, magenta 75°, jaune 0°, noir 45°), ajouté à l'angle de la trame. C'est ce qui crée la rosette des impressions offset.</p>
+      </section>
+
+      <section class="group" data-for="chars">
+        <h2>Typographie</h2>
+        <div class="seg fonts" role="group" aria-label="Police">
+          <button type="button" data-font="sans" aria-pressed="true"><span class="spec sans">Ag</span><span>Archivo<small>Sans serif</small></span></button>
+          <button type="button" data-font="serif" aria-pressed="false"><span class="spec serif">Ag</span><span>Fraunces<small>Serif</small></span></button>
+        </div>
+        <div class="field">
+          <div class="row"><label for="size">Taille<span class="term">corps</span></label><output id="o-size" for="size"></output></div>
+          <input type="range" id="size" data-key="size" min="5" max="64" step="1" value="12">
+        </div>
+        <div class="field">
+          <div class="row"><label for="weight">Épaisseur<span class="term">graisse</span></label><output id="o-weight" for="weight"></output></div>
+          <input type="range" id="weight" data-key="weight" min="100" max="900" step="50" value="500">
+        </div>
+        <div class="field">
+          <div class="row"><label for="spacing">Espacement des caractères<span class="term">approche</span></label><output id="o-spacing" for="spacing"></output></div>
+          <input type="range" id="spacing" data-key="spacing" min="-4" max="24" step="0.5" value="0">
+        </div>
+        <div class="field">
+          <div class="row"><label for="leading">Interligne</label><output id="o-leading" for="leading"></output></div>
+          <input type="range" id="leading" data-key="leading" min="60" max="200" step="5" value="100">
+        </div>
+      </section>
+
+      <section class="group" data-for="chars">
+        <h2>Caractères</h2>
+        <div class="field">
+          <label for="preset">Jeu de caractères</label>
+          <select id="preset"></select>
+        </div>
+        <div class="field">
+          <label for="chars">Caractères utilisés</label>
+          <input class="textin" id="chars" type="text" spellcheck="false" autocomplete="off">
+          <p class="hint">Tape n'importe quels caractères du clavier. L'espace sert aux zones vides.</p>
+        </div>
+        <label class="check"><input type="checkbox" id="sort" checked><span>Classer automatiquement par densité d'encre</span></label>
+      </section>
+
+      <section class="group">
+        <h2>Tons</h2>
+        <div class="field">
+          <div class="row"><label for="bright">Luminosité</label><output id="o-bright" for="bright"></output></div>
+          <input type="range" id="bright" data-key="bright" min="-100" max="100" step="1" value="0">
+        </div>
+        <div class="field">
+          <div class="row"><label for="contrast">Contraste</label><output id="o-contrast" for="contrast"></output></div>
+          <input type="range" id="contrast" data-key="contrast" min="-90" max="90" step="1" value="10">
+        </div>
+        <label class="check"><input type="checkbox" id="invert"><span>Inverser les tons</span></label>
+      </section>
+
+      <section class="group">
+        <h2>Couleurs</h2>
+        <div class="seg modes" role="group" aria-label="Mode de couleur">
+          <button type="button" data-mode="mono" aria-pressed="true">Monochrome</button>
+          <button type="button" data-mode="color" aria-pressed="false">Image</button>
+          <button type="button" data-mode="neon" aria-pressed="false">Néon</button>
+          <button type="button" data-mode="cmyk" aria-pressed="false" data-for="halftone" hidden>CMJN</button>
+        </div>
+        <div class="cutbox" id="neonFields" hidden>
+          <div class="field">
+            <span class="name" id="neonLabel">Palette néon</span>
+            <div class="neon-presets" id="neonPresets" role="group" aria-labelledby="neonLabel"></div>
+          </div>
+          <div class="neon-bar" id="neonBar" aria-hidden="true"></div>
+          <div class="colors three">
+            <label class="colorfield"><input type="color" id="neonA" value="#1a0322"><span>Ombres<code id="neonAHex">#1a0322</code></span></label>
+            <label class="colorfield"><input type="color" id="neonB" value="#c21fd6"><span>Milieux<code id="neonBHex">#c21fd6</code></span></label>
+            <label class="colorfield"><input type="color" id="neonC" value="#f7e85a"><span>Lumières<code id="neonCHex">#f7e85a</code></span></label>
+          </div>
+          <div class="field">
+            <div class="row"><label for="neonMid">Position des milieux</label><output id="o-neonMid" for="neonMid"></output></div>
+            <input type="range" id="neonMid" data-key="neonMid" min="10" max="90" step="1" value="55">
+          </div>
+          <div class="field">
+            <div class="row"><label for="neonMix">Couleurs de l'image</label><output id="o-neonMix" for="neonMix"></output></div>
+            <input type="range" id="neonMix" data-key="neonMix" min="0" max="100" step="1" value="0">
+            <p class="hint">0 % = palette seule, 100 % = vraies couleurs de l'image passées en néon. Entre les deux, les deux se mélangent.</p>
+          </div>
+          <div class="cutbox" id="neonImgFields">
+            <div class="field">
+              <div class="row"><label for="neonSat">Saturation</label><output id="o-neonSat" for="neonSat"></output></div>
+              <input type="range" id="neonSat" data-key="neonSat" min="0" max="250" step="5" value="160">
+            </div>
+            <div class="field">
+              <div class="row"><label for="neonPop">Éclat des couleurs</label><output id="o-neonPop" for="neonPop"></output></div>
+              <input type="range" id="neonPop" data-key="neonPop" min="0" max="100" step="1" value="45">
+            </div>
+          </div>
+          <p class="hint">Les zones sombres prennent la couleur des ombres, les plus claires celle des lumières. Sur fond sombre, l'effet ressort comme un écran allumé.</p>
+        </div>
+        <div class="swatches" id="swatches"></div>
+        <div class="colors">
+          <label class="colorfield" id="inkField"><input type="color" id="ink" value="#111111"><span>Encre<code id="inkHex">#111111</code></span></label>
+          <label class="colorfield"><input type="color" id="paperC" value="#ffffff"><span>Fond<code id="paperHex">#ffffff</code></span></label>
+        </div>
+        <label class="check"><input type="checkbox" id="transparent"><span>Fond transparent (PNG, SVG et code)</span></label>
+      </section>
+
+      <section class="group">
+        <h2>Néon &amp; écran</h2>
+        <button class="btn primary fxpreset" type="button" id="fxPreset">Appliquer le style « Néon numérique »</button>
+        <p class="hint">Fond noir, palette violet / jaune, lueur et grille d'écran. Tous les réglages restent modifiables ensuite.</p>
+        <div class="field">
+          <div class="row"><label for="fxGlow">Lueur</label><output id="o-fxGlow" for="fxGlow"></output></div>
+          <input type="range" id="fxGlow" data-key="fxGlow" min="0" max="200" step="5" value="0">
+        </div>
+        <div class="field">
+          <div class="row"><label for="fxGlowR">Diffusion de la lueur</label><output id="o-fxGlowR" for="fxGlowR"></output></div>
+          <input type="range" id="fxGlowR" data-key="fxGlowR" min="1" max="40" step="1" value="8">
+        </div>
+        <div class="field">
+          <div class="row"><label for="fxGrid">Grille d'écran</label><output id="o-fxGrid" for="fxGrid"></output></div>
+          <input type="range" id="fxGrid" data-key="fxGrid" min="0" max="100" step="1" value="0">
+        </div>
+        <div class="field">
+          <div class="row"><label for="fxGridW">Épaisseur de la grille</label><output id="o-fxGridW" for="fxGridW"></output></div>
+          <input type="range" id="fxGridW" data-key="fxGridW" min="5" max="50" step="1" value="18">
+        </div>
+        <label class="check"><input type="checkbox" id="fxGridSync" checked><span>Caler la grille sur la trame</span></label>
+        <div class="field" id="fxGridSizeField" hidden>
+          <div class="row"><label for="fxGridSize">Taille des mailles</label><output id="o-fxGridSize" for="fxGridSize"></output></div>
+          <input type="range" id="fxGridSize" data-key="fxGridSize" min="2" max="40" step="1" value="6">
+        </div>
+        <div class="field">
+          <div class="row"><label for="fxScan">Lignes de balayage</label><output id="o-fxScan" for="fxScan"></output></div>
+          <input type="range" id="fxScan" data-key="fxScan" min="0" max="100" step="1" value="0">
+        </div>
+        <div class="field">
+          <div class="row"><label for="fxScanGap">Écart des lignes</label><output id="o-fxScanGap" for="fxScanGap"></output></div>
+          <input type="range" id="fxScanGap" data-key="fxScanGap" min="2" max="16" step="1" value="4">
+        </div>
+        <div class="field">
+          <div class="row"><label for="fxChroma">Aberration chromatique</label><output id="o-fxChroma" for="fxChroma"></output></div>
+          <input type="range" id="fxChroma" data-key="fxChroma" min="0" max="12" step="0.5" value="0">
+        </div>
+        <div class="field">
+          <div class="row"><label for="fxGrain">Grain</label><output id="o-fxGrain" for="fxGrain"></output></div>
+          <input type="range" id="fxGrain" data-key="fxGrain" min="0" max="100" step="1" value="0">
+        </div>
+        <div class="field">
+          <div class="row"><label for="fxVig">Vignettage</label><output id="o-fxVig" for="fxVig"></output></div>
+          <input type="range" id="fxVig" data-key="fxVig" min="0" max="100" step="1" value="0">
+        </div>
+        <button class="btn small" type="button" id="fxReset">Retirer les effets d'écran</button>
+      </section>
+
+      <section class="group">
+        <h2>Sortie</h2>
+        <div class="field">
+          <div class="row"><label for="scale">Résolution PNG / JPEG</label><output id="o-scale"></output></div>
+          <select id="scale">
+            <option value="1">1× (écran)</option>
+            <option value="2" selected>2× (Retina)</option>
+            <option value="3">3× (impression)</option>
+            <option value="4">4× (grand format)</option>
+          </select>
+        </div>
+        <p class="hint">Le SVG et le code restent vectoriels : ils s'affichent nets à toutes les tailles.</p>
+      </section>
+    </aside>
+
+    <section class="stage" aria-label="Aperçu">
+      <div class="stage-head">
+        <div class="stats" id="stats">Préparation…</div>
+        <div class="stage-tools">
+          <div class="seg views" role="group" aria-label="Vue">
+            <button type="button" data-view="result" aria-pressed="true">Résultat</button>
+            <button type="button" data-view="side" aria-pressed="false">Côte à côte</button>
+            <button type="button" data-view="wipe" aria-pressed="false">Curseur</button>
+          </div>
+          <div class="seg" role="group" aria-label="Zoom">
+            <button type="button" data-zoom="fit" aria-pressed="true">Ajuster</button>
+            <button type="button" data-zoom="actual" aria-pressed="false">100 %</button>
+          </div>
+        </div>
+      </div>
+      <div class="penbar" id="penBar" hidden>
+        <div class="pentools" role="toolbar" aria-label="Outils plume">
+          <button type="button" data-pen="pen" aria-pressed="true" title="Plume (P)"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.5L12.5 7.5 9.8 14.5H6.2L3.5 7.5Z"/><path d="M8 1.5V7"/><circle cx="8" cy="8.2" r="1.2"/></svg><span>Plume</span></button>
+          <button type="button" data-pen="select" aria-pressed="false" title="Sélection directe (A)"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3.5 1.5V13l3-3 2.4 5 2-1-2.4-4.8h4.2Z"/></svg><span>Sélection</span></button>
+          <button type="button" data-pen="add" aria-pressed="false" title="Ajouter un point (+)"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M6.5 2.5L10 7.5 7.8 13.5H5.2L3 7.5Z"/><path d="M12.5 1.5V6.5M10 4H15"/></svg><span>Ajouter</span></button>
+          <button type="button" data-pen="del" aria-pressed="false" title="Supprimer un point (−)"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M6.5 2.5L10 7.5 7.8 13.5H5.2L3 7.5Z"/><path d="M10 4H15"/></svg><span>Supprimer</span></button>
+          <button type="button" data-pen="convert" aria-pressed="false" title="Convertir le point (Maj+C)"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2 13.5L8 3l6 10.5"/><circle cx="8" cy="3" r="1.4"/></svg><span>Convertir</span></button>
+        </div>
+        <div class="penactions">
+          <button type="button" id="penUndo" title="Annuler (Ctrl+Z)" aria-label="Annuler"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M5.5 3.5L2.5 6.5l3 3"/><path d="M2.5 6.5H10a3.5 3.5 0 010 7H7"/></svg></button>
+          <button type="button" id="penRedo" title="Rétablir (Ctrl+Maj+Z)" aria-label="Rétablir"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M10.5 3.5l3 3-3 3"/><path d="M13.5 6.5H6a3.5 3.5 0 000 7h3"/></svg></button>
+        </div>
+        <p class="penhint" id="penHint"></p>
+      </div>
+      <div class="viewport fit" id="viewport" data-view="result">
+        <div class="compare" id="compare">
+          <figure class="pane before"><figcaption>Avant</figcaption><canvas id="orig" class="orig" role="img" aria-label="Image d'origine"></canvas></figure>
+          <figure class="pane after"><figcaption>Après</figcaption>
+            <div class="cwrap" id="cwrap">
+              <canvas id="out" role="img" aria-label="Aperçu de l'image convertie en caractères"></canvas>
+              <svg class="curve-ui" id="curveUI" viewBox="0 0 1 1" preserveAspectRatio="none" aria-hidden="true" hidden><path class="cu-ext" id="cuExt"/><path class="cu-under" id="cuUnder"/><path class="cu-line" id="cuLine"/><path class="cu-rubber" id="cuRubber"/><path class="cu-arms" id="cuArms"/></svg>
+              <div class="curve-handles" id="curveHandles" hidden></div>
+            </div>
+          </figure>
+          <div class="wipe-handle" aria-hidden="true"></div>
+        </div>
+        <input type="range" class="wipe-range" id="wipe" min="0" max="100" step="1" value="50" aria-label="Position du curseur avant / après">
+        <div class="dropveil" id="dropveil" hidden>Dépose l'image ici</div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<div class="sheet" id="sheet" hidden>
+  <div class="sheet-card" role="dialog" aria-modal="true" aria-labelledby="sheetTitle">
+    <div class="sheet-top">
+      <div>
+        <h3 id="sheetTitle">Intégrer dans un site</h3>
+        <p class="hint" id="sheetSize"></p>
+      </div>
+      <button class="btn small" type="button" id="sheetClose">Fermer</button>
+    </div>
+    <div class="tabs" role="tablist" aria-label="Format du code">
+      <button type="button" role="tab" data-tab="html" aria-selected="true">HTML + CSS</button>
+      <button type="button" role="tab" data-tab="svg" aria-selected="false">SVG en ligne</button>
+      <button type="button" role="tab" data-tab="txt" aria-selected="false">Texte brut</button>
+    </div>
+    <textarea id="code" readonly spellcheck="false" aria-label="Code généré"></textarea>
+    <div class="sheet-foot">
+      <p class="hint" id="tabHint"></p>
+      <div class="actions">
+        <button class="btn" type="button" id="codeDl">Télécharger</button>
+        <button class="btn primary" type="button" id="codeCopy">Copier le code</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast" role="status" hidden></div>
+
+<script>
+(() => {
+  const FONTS = {
+    sans:  { family: 'Archivo',  fallback: 'Arial, sans-serif', gf: 'Archivo:wght@100..900' },
+    serif: { family: 'Fraunces', fallback: 'Georgia, serif',     gf: 'Fraunces:opsz,wght@9..144,100..900' }
+  };
+  const PRESETS = [
+    { id: 'classique', name: 'Classique', chars: ' .:-=+*#%@' },
+    { id: 'detail',    name: 'Détaillé (70 caractères)', chars: " .'`^\",:;Il!i><~+_-?][}{1)(|\\/tfjrxnuvczXYUJCLQ0OZmwqpdbkhao*#MW&8%B@$" },
+    { id: 'simple',    name: 'Minimal', chars: ' .oO@' },
+    { id: 'binaire',   name: 'Binaire', chars: ' 01' },
+    { id: 'lettres',   name: 'Lettres', chars: ' ilcoeaxswkbdmMWB' },
+    { id: 'signes',    name: 'Signes', chars: ' .,-~+=*x#' },
+    { id: 'perso',     name: 'Personnalisé', chars: '' }
+  ];
+  const SWATCHES = [
+    { name: 'Encre', ink: '#111111', paper: '#ffffff' },
+    { name: 'Négatif', ink: '#f4f4f0', paper: '#0e0e10' },
+    { name: 'Riso bleu', ink: '#2336d1', paper: '#f2f0ea' },
+    { name: 'Terminal', ink: '#5cff8a', paper: '#07140c' }
+  ];
+
+  const state = {
+    font: 'sans', size: 12, weight: 500, spacing: 0, leading: 100, width: 1200,
+    preset: 'classique', custom: ' .:-=+*#%@', sort: true, invert: false,
+    bright: 0, contrast: 10, mode: 'mono', ink: '#111111', paper: '#ffffff',
+    transparent: false, zoom: 'fit', scale: 2,
+    cut: false, cutAuto: true, cutColor: '#ffffff', tol: 14, soft: 8, flood: true,
+    grad: false, gType: 'linear', gAngle: 45, gPos: 50, gSoft: 45, gStyle: 'superpose', gInvert: false,
+    gShape: 'droite', gAmp: 35, gFreq: 2, gPhase: 0, gCurve: [0.42, 1, 0.58, 0], gShowCurve: true,
+    gPath: { closed: false, nodes: [
+      { x: 0, y: 0.72, hin: [0, 0], hout: [0.12, -0.04], smooth: true },
+      { x: 0.36, y: 0.42, hin: [-0.1, 0.08], hout: [0.1, -0.08], smooth: true },
+      { x: 0.74, y: 0, hin: [-0.08, 0.1], hout: [0, 0], smooth: true }
+    ] },
+    effect: 'chars', htType: 'points', htShape: 'rond', htGrid: 'carree', htCell: 12, htAngle: 45,
+    htMax: 120, htMin: 0, htJit: 0, htAmp: 0, htFreq: 6, htVar: true,
+    neonA: '#1a0322', neonB: '#c21fd6', neonC: '#f7e85a', neonMid: 55, neonMix: 0, neonSat: 160, neonPop: 45,
+    fxGlow: 0, fxGlowR: 8, fxGrid: 0, fxGridW: 18, fxGridSync: true, fxGridSize: 6,
+    fxScan: 0, fxScanGap: 4, fxChroma: 0, fxGrain: 0, fxVig: 0
+  };
+  const NEON_PRESETS = [
+    { name: 'Violet / jaune', a: '#1a0322', b: '#c21fd6', c: '#f7e85a', paper: '#07010a' },
+    { name: 'Cyber', a: '#04102a', b: '#1f6bff', c: '#34f5ff', paper: '#02040c' },
+    { name: 'Rose / cyan', a: '#1a0414', b: '#ff2bb1', c: '#7df9ff', paper: '#08020a' },
+    { name: 'Acide', a: '#031a0a', b: '#19c24a', c: '#e8ff5a', paper: '#010702' },
+    { name: 'Braise', a: '#1a0302', b: '#ff3b1f', c: '#ffd27a', paper: '#080101' },
+    { name: 'Glace', a: '#0a0f1f', b: '#7a8cff', c: '#ffffff', paper: '#03040a' }
+  ];
+  const DEFAULT_PATH = JSON.stringify(state.gPath);
+
+  let source = null, rawSource = null, rawData = null, sourceName = 'exemple-sphere', sourceId = 0, grid = null;
+  let cutDirty = true, picking = false;
+
+  const $ = (s) => document.querySelector(s);
+  const out = $('#out');
+  const octx = out.getContext('2d');
+  const mcan = document.createElement('canvas');
+  const mctx = mcan.getContext('2d', { willReadFrequently: true });
+  const scan = document.createElement('canvas');
+  const sctx = scan.getContext('2d', { willReadFrequently: true });
+
+  const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
+  const hexToRgb = (h) => { h = h.replace('#', ''); if (h.length === 3) h = h.split('').map(c => c + c).join(''); const n = parseInt(h, 16); return [(n >> 16) & 255, (n >> 8) & 255, n & 255]; };
+  const lum = ([r, g, b]) => (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255;
+  const toHex = (r, g, b) => '#' + ((1 << 24) | (r << 16) | (g << 8) | b).toString(16).slice(1);
+  const esc = (c) => c === '&' ? '&amp;' : c === '<' ? '&lt;' : c === '>' ? '&gt;' : c;
+  const fmt = (n) => n.toLocaleString('fr-FR');
+  const round2 = (n) => Math.round(n * 100) / 100;
+
+  /* ---------- Toast ---------- */
+  let toastTimer;
+  function toast(msg) {
+    const t = $('#toast'); t.textContent = msg; t.hidden = false;
+    clearTimeout(toastTimer); toastTimer = setTimeout(() => { t.hidden = true; }, 3200);
+  }
+
+  /* ---------- Image d'exemple ---------- */
+  function makeSample() {
+    const c = document.createElement('canvas'); c.width = 900; c.height = 900;
+    const x = c.getContext('2d');
+    x.fillStyle = '#ffffff'; x.fillRect(0, 0, 900, 900);
+    // ombre portée
+    x.save(); x.translate(470, 818); x.scale(1, 0.16);
+    const sh = x.createRadialGradient(0, 0, 0, 0, 0, 330);
+    sh.addColorStop(0, 'rgba(0,0,0,.55)'); sh.addColorStop(1, 'rgba(0,0,0,0)');
+    x.fillStyle = sh; x.beginPath(); x.arc(0, 0, 330, 0, Math.PI * 2); x.fill(); x.restore();
+    // sphère
+    const cx = 450, cy = 430, R = 330;
+    const g = x.createRadialGradient(cx - 120, cy - 140, 10, cx, cy, R + 30);
+    g.addColorStop(0, '#fffaf0'); g.addColorStop(0.3, '#ffd479'); g.addColorStop(0.68, '#e8604a'); g.addColorStop(1, '#2a1448');
+    x.fillStyle = g; x.beginPath(); x.arc(cx, cy, R, 0, Math.PI * 2); x.fill();
+    // méridiens et parallèles
+    x.save(); x.beginPath(); x.arc(cx, cy, R, 0, Math.PI * 2); x.clip();
+    x.strokeStyle = 'rgba(25,10,45,.38)'; x.lineWidth = 9;
+    for (let i = 1; i <= 3; i++) { x.beginPath(); x.ellipse(cx, cy, R * Math.sin(i * Math.PI / 8), R, 0, 0, Math.PI * 2); x.stroke(); }
+    x.beginPath(); x.moveTo(cx, cy - R); x.lineTo(cx, cy + R); x.stroke();
+    for (let i = -3; i <= 3; i++) {
+      const y = cy + i * 90, hw = Math.sqrt(Math.max(0, R * R - (i * 90) ** 2));
+      x.beginPath(); x.ellipse(cx, y, hw, hw * 0.16, 0, 0, Math.PI * 2); x.stroke();
+    }
+    x.restore();
+    // reflet
+    const hl = x.createRadialGradient(cx - 130, cy - 150, 0, cx - 130, cy - 150, 110);
+    hl.addColorStop(0, 'rgba(255,255,255,.9)'); hl.addColorStop(1, 'rgba(255,255,255,0)');
+    x.fillStyle = hl; x.beginPath(); x.arc(cx - 130, cy - 150, 110, 0, Math.PI * 2); x.fill();
+    return c;
+  }
+
+  /* ---------- Détourage ---------- */
+  function getRawData() {
+    if (!rawData) rawData = rawSource.getContext('2d', { willReadFrequently: true }).getImageData(0, 0, rawSource.width, rawSource.height);
+    return rawData;
+  }
+  // Couleur la plus fréquente sur le pourtour de l'image
+  function detectBg() {
+    const { data, width: w, height: h } = getRawData();
+    const buckets = new Map();
+    const add = (x, y) => {
+      const i = (y * w + x) * 4;
+      if (data[i + 3] < 128) return;
+      const k = ((data[i] >> 4) << 8) | ((data[i + 1] >> 4) << 4) | (data[i + 2] >> 4);
+      let b = buckets.get(k); if (!b) { b = [0, 0, 0, 0]; buckets.set(k, b); }
+      b[0]++; b[1] += data[i]; b[2] += data[i + 1]; b[3] += data[i + 2];
+    };
+    const step = Math.max(1, Math.floor(Math.max(w, h) / 600));
+    for (let x = 0; x < w; x += step) { add(x, 0); add(x, h - 1); }
+    for (let y = 0; y < h; y += step) { add(0, y); add(w - 1, y); }
+    let best = null;
+    for (const b of buckets.values()) if (!best || b[0] > best[0]) best = b;
+    if (!best) return '#ffffff';
+    return toHex(Math.round(best[1] / best[0]), Math.round(best[2] / best[0]), Math.round(best[3] / best[0]));
+  }
+  function syncCutColorUI() {
+    $('#cutColor').value = state.cutColor; $('#cutHex').textContent = state.cutColor;
+    $('#cutMode').textContent = state.cutAuto ? 'Détectée' : 'Choisie';
+  }
+  function applyCutout() {
+    cutDirty = false;
+    if (!state.cut) { source = rawSource; sourceId++; return; }
+    if (state.cutAuto) { state.cutColor = detectBg(); syncCutColorUI(); }
+    const src = getRawData();
+    const w = src.width, h = src.height, n = w * h, d = src.data;
+    const [br, bg, bb] = hexToRgb(state.cutColor);
+    const T = state.tol * 2.2, S = Math.max(0.001, state.soft * 2.2);
+    // facteur d'opacité : 0 = fond, 1 = sujet
+    const keep = new Float32Array(n);
+    for (let p = 0, i = 0; p < n; p++, i += 4) {
+      const dr = d[i] - br, dg = d[i + 1] - bg, db = d[i + 2] - bb;
+      const dist = Math.sqrt(dr * dr + dg * dg + db * db);
+      keep[p] = dist <= T ? 0 : dist >= T + S ? 1 : (dist - T) / S;
+    }
+    if (state.flood) {
+      // on ne retire que le fond connecté aux bords
+      const seen = new Uint8Array(n), stack = new Int32Array(n);
+      let sp = 0;
+      const push = (p) => { if (!seen[p] && keep[p] < 1) { seen[p] = 1; stack[sp++] = p; } };
+      for (let x = 0; x < w; x++) { push(x); push((h - 1) * w + x); }
+      for (let y = 0; y < h; y++) { push(y * w); push(y * w + w - 1); }
+      while (sp) {
+        const p = stack[--sp], x = p % w;
+        if (keep[p] > 0) continue; // bord adouci : atteint mais on ne propage pas au-delà
+        if (x > 0) push(p - 1);
+        if (x < w - 1) push(p + 1);
+        if (p >= w) push(p - w);
+        if (p < n - w) push(p + w);
+      }
+      for (let p = 0; p < n; p++) if (!seen[p]) keep[p] = 1;
+    }
+    const outData = new ImageData(w, h);
+    const o = outData.data;
+    for (let p = 0, i = 0; p < n; p++, i += 4) {
+      o[i] = d[i]; o[i + 1] = d[i + 1]; o[i + 2] = d[i + 2]; o[i + 3] = d[i + 3] * keep[p];
+    }
+    const c = document.createElement('canvas'); c.width = w; c.height = h;
+    c.getContext('2d').putImageData(outData, 0, 0);
+    source = c; sourceId++;
+  }
+  function drawCutPreview() {
+    const pv = $('#cutPreview');
+    const k = Math.min(1, 300 / Math.max(source.width, source.height));
+    pv.width = Math.max(1, Math.round(source.width * k)); pv.height = Math.max(1, Math.round(source.height * k));
+    const ctx = pv.getContext('2d'); ctx.clearRect(0, 0, pv.width, pv.height);
+    ctx.drawImage(source, 0, 0, pv.width, pv.height);
+  }
+
+  /* ---------- Caractères & densité ---------- */
+  function getChars() {
+    const s = state.custom;
+    const arr = [];
+    for (const ch of s) { if (ch !== ' ' && /\s/.test(ch)) continue; if (!arr.includes(ch)) arr.push(ch); }
+    if (arr.length < 2) { if (!arr.includes(' ')) arr.unshift(' '); else arr.push('#'); }
+    return arr;
+  }
+  const fontStr = (size, weight) => { const f = FONTS[state.font]; return `${weight} ${size}px "${f.family}", ${f.fallback}`; };
+
+  async function ensureFont(chars) {
+    const f = FONTS[state.font];
+    const spec = `${state.weight} 40px "${f.family}"`;
+    try { await document.fonts.load(spec, chars.join('')); } catch (e) { /* police de secours */ }
+    try { return document.fonts.check(spec, chars.join('')); } catch (e) { return false; }
+  }
+
+  const densCache = new Map();
+  function measureDensity(chars, cacheable) {
+    const key = state.font + '|' + state.weight + '|' + chars.join('');
+    if (densCache.has(key)) return densCache.get(key);
+    const S = 56; mcan.width = S; mcan.height = S;
+    mctx.font = fontStr(44, state.weight); mctx.textAlign = 'center'; mctx.textBaseline = 'middle'; mctx.fillStyle = '#000';
+    const d = chars.map((ch) => {
+      if (ch === ' ') return 0;
+      mctx.clearRect(0, 0, S, S); mctx.fillText(ch, S / 2, S / 2);
+      const px = mctx.getImageData(0, 0, S, S).data; let sum = 0;
+      for (let i = 3; i < px.length; i += 4) sum += px[i];
+      return sum / (255 * S * S);
+    });
+    if (cacheable) densCache.set(key, d);
+    return d;
+  }
+
+  function buildLUT(chars, dens) {
+    const n = chars.length, lut = new Array(256);
+    if (state.sort) {
+      const items = chars.map((c, i) => ({ c, d: dens[i] })).sort((a, b) => a.d - b.d);
+      const min = items[0].d, span = (items[n - 1].d - min) || 1;
+      // mélange densité mesurée + rang : fidèle aux tons tout en utilisant tout le jeu
+      const keys = items.map((it, i) => 0.5 * ((it.d - min) / span) + 0.5 * (i / (n - 1)));
+      let j = 0;
+      for (let v = 0; v < 256; v++) {
+        const t = v / 255;
+        while (j < n - 1 && Math.abs(keys[j + 1] - t) <= Math.abs(keys[j] - t)) j++;
+        lut[v] = items[j].c;
+      }
+    } else {
+      for (let v = 0; v < 256; v++) lut[v] = chars[Math.min(n - 1, Math.floor(v * n / 256))];
+    }
+    return lut;
+  }
+
+  /* ---------- Échantillonnage ---------- */
+  let sampleCache = { key: '', data: null };
+  function sampleSource(cols, rows) {
+    const key = sourceId + ':' + cols + 'x' + rows;
+    if (sampleCache.key === key) return sampleCache.data;
+    const k = 3, sw = cols * k, sh = rows * k;
+    scan.width = sw; scan.height = sh;
+    sctx.clearRect(0, 0, sw, sh);
+    sctx.imageSmoothingEnabled = true; sctx.imageSmoothingQuality = 'high';
+    sctx.drawImage(source, 0, 0, sw, sh);
+    const px = sctx.getImageData(0, 0, sw, sh).data;
+    const n = cols * rows;
+    const R = new Float32Array(n), G = new Float32Array(n), B = new Float32Array(n), A = new Float32Array(n);
+    for (let y = 0; y < sh; y++) {
+      const base = ((y / k) | 0) * cols;
+      for (let x = 0; x < sw; x++) {
+        const i = (y * sw + x) * 4, c = base + ((x / k) | 0), a = px[i + 3] / 255;
+        R[c] += px[i] * a; G[c] += px[i + 1] * a; B[c] += px[i + 2] * a; A[c] += a;
+      }
+    }
+    const inv = 1 / (k * k);
+    for (let c = 0; c < n; c++) { R[c] *= inv; G[c] *= inv; B[c] *= inv; A[c] *= inv; }
+    sampleCache = { key, data: { R, G, B, A } };
+    return sampleCache.data;
+  }
+
+  function computeGrid(chars, lut) {
+    mctx.font = fontStr(state.size, state.weight);
+    const vis = chars.filter(c => c !== ' ');
+    let adv = 0; for (const c of vis) adv += mctx.measureText(c).width; adv /= (vis.length || 1);
+    const cw = Math.max(1, adv + state.spacing);
+    const lh = Math.max(1, state.size * state.leading / 100);
+    const sw = source.width, sh = source.height;
+    const cols = Math.max(2, Math.round(state.width / cw));
+    const rows = Math.max(1, Math.round(cols * cw * (sh / sw) / lh));
+    const { R, G, B, A } = sampleSource(cols, rows);
+    const { adj, inv } = toneParams();
+    const neon = state.mode === 'neon' ? neonLUT() : null;
+    const n = cols * rows;
+    const glyph = new Array(n), col = new Uint8ClampedArray(n * 3);
+    let count = 0;
+    for (let i = 0; i < n; i++) {
+      const a = A[i];
+      // zones transparentes (fond détouré ou PNG transparent) : aucun caractère
+      if (a < 0.03) { glyph[i] = ' '; continue; }
+      const r = adj(R[i] / 255 / a), g = adj(G[i] / 255 / a), bl = adj(B[i] / 255 / a);
+      const L = 0.2126 * r + 0.7152 * g + 0.0722 * bl;
+      const ch = lut[Math.round((inv ? L : 1 - L) * Math.min(1, a) * 255)];
+      glyph[i] = ch; if (ch !== ' ') count++;
+      if (neon) neonInto(col, i * 3, r, g, bl, L, neon);
+      else { col[i * 3] = r * 255; col[i * 3 + 1] = g * 255; col[i * 3 + 2] = bl * 255; }
+    }
+    return { kind: 'chars', cols, rows, cw, lh, glyph, col, count, W: Math.round(cols * cw), H: Math.round(rows * lh) };
+  }
+
+  // Couleurs par case/point : couleurs de l'image ou palette néon
+  const perCell = () => state.mode === 'color' || state.mode === 'neon';
+  // Palette néon : dégradé ombres → milieux → lumières appliqué selon la luminosité
+  let neonCache = { key: '', lut: null };
+  function neonLUT() {
+    const key = state.neonA + state.neonB + state.neonC + state.neonMid;
+    if (neonCache.key === key) return neonCache.lut;
+    const A = hexToRgb(state.neonA), B = hexToRgb(state.neonB), C = hexToRgb(state.neonC), m = clamp(state.neonMid / 100, 0.05, 0.95);
+    const lut = new Uint8ClampedArray(256 * 3);
+    for (let v = 0; v < 256; v++) {
+      const t = v / 255, [P, Q, f] = t < m ? [A, B, t / m] : [B, C, (t - m) / (1 - m)];
+      for (let c = 0; c < 3; c++) lut[v * 3 + c] = P[c] + (Q[c] - P[c]) * f;
+    }
+    neonCache = { key, lut };
+    return lut;
+  }
+
+  // Couleur néon d'un point : palette, couleurs de l'image ravivées, ou mélange des deux
+  function hsv2rgb(h, s, v) {
+    const c = v * s, x = c * (1 - Math.abs((h % 2) - 1)), m = v - c;
+    const [r, g, b] = h < 1 ? [c, x, 0] : h < 2 ? [x, c, 0] : h < 3 ? [0, c, x] : h < 4 ? [0, x, c] : h < 5 ? [x, 0, c] : [c, 0, x];
+    return [r + m, g + m, b + m];
+  }
+  function neonInto(out, o, r, g, b, L, lut) {
+    const q = Math.round(L * 255) * 3;
+    let pr = lut[q], pg = lut[q + 1], pb = lut[q + 2];
+    const mix = state.neonMix / 100;
+    if (mix > 0) {
+      const mx = Math.max(r, g, b), mn = Math.min(r, g, b), d = mx - mn;
+      let h = 0;
+      if (d > 0) h = mx === r ? ((g - b) / d + 6) % 6 : mx === g ? (b - r) / d + 2 : (r - g) / d + 4;
+      const s = Math.min(1, (mx ? d / mx : 0) * state.neonSat / 100);
+      const v = mx + (1 - mx) * state.neonPop / 100;
+      const [ir, ig, ib] = hsv2rgb(h, s, v);
+      pr += (ir * 255 - pr) * mix; pg += (ig * 255 - pg) * mix; pb += (ib * 255 - pb) * mix;
+    }
+    out[o] = pr; out[o + 1] = pg; out[o + 2] = pb;
+  }
+
+  // Réglages de tons communs aux deux effets
+  function toneParams() {
+    const paper = hexToRgb(state.paper), ink = hexToRgb(state.ink);
+    const autoInv = state.mode === 'mono' ? lum(ink) > lum(paper) : lum(paper) < 0.5;
+    const inv = state.mode === 'cmyk' ? state.invert : autoInv !== state.invert;
+    const fct = Math.tan((clamp(state.contrast, -95, 95) / 100 + 1) * Math.PI / 4);
+    const b = state.bright / 200;
+    return { inv, adj: (x) => clamp((x - 0.5) * fct + 0.5 + b, 0, 1) };
+  }
+
+  /* ---------- Halftone ---------- */
+  const rnd = (i, j, k) => { const t = Math.sin(i * 127.1 + j * 311.7 + k * 74.7) * 43758.5453; return t - Math.floor(t); };
+  let toneCache = { key: '', px: null };
+  // carte des tons : l'image réduite (moyenne propre) à environ un échantillon par demi-cellule
+  function toneMap(W, H, step) {
+    const tw = Math.max(2, Math.round(W / step)), th = Math.max(2, Math.round(H / step));
+    const key = sourceId + ':' + tw + 'x' + th;
+    if (toneCache.key !== key) {
+      let cur = source, cw = source.width, ch = source.height;
+      while (cw / 2 > tw * 1.5 && ch / 2 > th * 1.5) {
+        const c = document.createElement('canvas'); c.width = Math.max(1, Math.round(cw / 2)); c.height = Math.max(1, Math.round(ch / 2));
+        const x = c.getContext('2d'); x.imageSmoothingQuality = 'high'; x.drawImage(cur, 0, 0, c.width, c.height);
+        cur = c; cw = c.width; ch = c.height;
+      }
+      scan.width = tw; scan.height = th; sctx.clearRect(0, 0, tw, th);
+      sctx.imageSmoothingEnabled = true; sctx.imageSmoothingQuality = 'high'; sctx.drawImage(cur, 0, 0, tw, th);
+      toneCache = { key, px: sctx.getImageData(0, 0, tw, th).data };
+      sampleCache = { key: '', data: null };
+    }
+    const px = toneCache.px, n = tw * th;
+    const D = new Float32Array(n), C = new Uint8ClampedArray(n * 3), A = new Float32Array(n);
+    const { adj, inv } = toneParams();
+    const neon = state.mode === 'neon' ? neonLUT() : null;
+    for (let i = 0; i < n; i++) {
+      const a = px[i * 4 + 3] / 255; A[i] = a;
+      if (a < 0.03) continue;
+      const r = adj(px[i * 4] / 255), g = adj(px[i * 4 + 1] / 255), b = adj(px[i * 4 + 2] / 255);
+      const L = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+      D[i] = (inv ? L : 1 - L) * a;
+      if (neon) neonInto(C, i * 3, r, g, b, L, neon);
+      else { C[i * 3] = r * 255; C[i * 3 + 1] = g * 255; C[i * 3 + 2] = b * 255; }
+    }
+    const idx = (x, y) => clamp(Math.floor(x / W * tw), 0, tw - 1) + clamp(Math.floor(y / H * th), 0, th - 1) * tw;
+    return { D, C, A, idx };
+  }
+  const PLATES = [
+    { ch: 'c', color: '#00a0e3', angle: 15 },
+    { ch: 'm', color: '#e5097f', angle: 75 },
+    { ch: 'y', color: '#ffe500', angle: 0 },
+    { ch: 'k', color: '#1d1d1b', angle: 45 }
+  ];
+  function computeHalftone() {
+    const W = Math.round(state.width), H = Math.max(1, Math.round(state.width * source.height / source.width));
+    const T = toneMap(W, H, Math.max(1, state.htCell / 2));
+    const cmyk = state.mode === 'cmyk';
+    const out = { kind: 'halftone', W, H, count: 0, plates: [], cmyk, color: perCell(), type: state.htType, shape: state.htShape };
+    const plates = cmyk ? PLATES : [{ ch: 'd', color: null, angle: 0 }];
+    plates.forEach((pl, pi) => {
+      const dAt = pl.ch === 'd' ? (i) => T.D[i] : (i) => {
+        const r = T.C[i * 3] / 255, g = T.C[i * 3 + 1] / 255, b = T.C[i * 3 + 2] / 255, k = 1 - Math.max(r, g, b);
+        let v;
+        if (pl.ch === 'k') v = k;
+        else { const den = 1 - k || 1; v = pl.ch === 'c' ? (1 - r - k) / den : pl.ch === 'm' ? (1 - g - k) / den : (1 - b - k) / den; }
+        if (state.invert) v = 1 - v;
+        return v * T.A[i];
+      };
+      const items = genItems(W, H, T, dAt, state.htAngle + pl.angle, pi * 13);
+      out.plates.push({ color: pl.color, items }); out.count += items.length;
+    });
+    return out;
+  }
+  function genItems(W, H, T, dAt, angleDeg, seed) {
+    const cell = state.htCell, a = angleDeg * Math.PI / 180, ca = Math.cos(a), sa = Math.sin(a);
+    const mn = state.htMin / 100, mx = state.htMax / 100, items = [];
+    const keepCol = perCell();
+    const colOf = (k) => keepCol ? [T.C[k * 3], T.C[k * 3 + 1], T.C[k * 3 + 2]] : null;
+    const cx = W / 2, cy = H / 2, R = Math.hypot(W, H) / 2 + cell;
+    if (state.htType === 'points') {
+      const hex = state.htGrid === 'hexa', rowH = hex ? cell * 0.8660254 : cell;
+      const nj = Math.ceil(R / rowH), ni = Math.ceil(R / cell) + 1, jit = state.htJit / 100 * cell;
+      for (let j = -nj; j <= nj; j++) for (let i = -ni; i <= ni; i++) {
+        let u = i * cell + (hex && (j & 1) ? cell / 2 : 0), v = j * rowH;
+        if (jit) { u += (rnd(i, j, seed + 1) - 0.5) * jit; v += (rnd(j, i, seed + 2) - 0.5) * jit; }
+        const x = cx + u * ca - v * sa, y = cy + u * sa + v * ca;
+        if (x < -cell || y < -cell || x > W + cell || y > H + cell) continue;
+        const k = T.idx(x, y), d = dAt(k);
+        if (d < 0.004) continue;
+        const s = cell / 2 * (mn + (mx - mn) * Math.sqrt(d));
+        if (s < 0.25) continue;
+        items.push({ x, y, s, a, col: colOf(k) });
+      }
+    } else if (state.htType === 'lignes') {
+      const nj = Math.ceil(R / cell), step = Math.max(1.5, cell / 3);
+      const amp = state.htAmp / 100 * cell * 1.5, wl = state.htAmp > 0 ? (2 * R) / state.htFreq : 0;
+      for (let j = -nj; j <= nj; j++) {
+        let top = [], bot = [], prev = null;
+        const flush = () => { if (top.length >= 2) items.push({ poly: top.concat(bot.reverse()), col: null }); top = []; bot = []; prev = null; };
+        for (let u = -R; u <= R + step; u += step) {
+          const ph = wl ? 2 * Math.PI * u / wl : 0;
+          const v = j * cell + (wl ? amp * Math.sin(ph) : 0);
+          const x = cx + u * ca - v * sa, y = cy + u * sa + v * ca;
+          if (x < -step || y < -step || x > W + step || y > H + step) { flush(); continue; }
+          const k = T.idx(x, y), d = dAt(k);
+          const h = d < 0.004 ? 0 : cell / 2 * (mn + (mx - mn) * d);
+          if (h < 0.15) { flush(); continue; }
+          const dv = wl ? amp * 2 * Math.PI / wl * Math.cos(ph) : 0;
+          let tx = ca - sa * dv, ty = sa + ca * dv; const tl = Math.hypot(tx, ty); tx /= tl; ty /= tl;
+          const t = [x - ty * h, y + tx * h], b = [x + ty * h, y - tx * h];
+          if (keepCol) {
+            const col = colOf(k);
+            if (prev) items.push({ poly: [prev.t, t, b, prev.b], col: prev.col });
+            prev = { t, b, col };
+          } else { top.push(t); bot.push(b); }
+        }
+        flush();
+      }
+    } else {
+      const cols = Math.ceil(W / cell), rows = Math.ceil(H / cell), rad = cell / 2 * mx;
+      for (let j = 0; j < rows; j++) for (let i = 0; i < cols; i++) {
+        const x = (i + rnd(i, j, seed + 3)) * cell, y = (j + rnd(i, j, seed + 4)) * cell;
+        if (x > W || y > H) continue;
+        const k = T.idx(x, y), d = dAt(k);
+        if (d < 0.004 || rnd(i, j, seed + 5) >= d) continue;
+        items.push({ x, y, s: state.htVar ? rad * (0.35 + 0.65 * Math.sqrt(d)) : rad, a: 0, col: colOf(k), dot: true });
+      }
+    }
+    return items;
+  }
+  // Formes : surfaces équivalentes à un disque de rayon s, orientées selon l'angle de trame
+  function regPoly(x, y, R, n, rot) {
+    const pts = [];
+    for (let i = 0; i < n; i++) { const t = rot + i * 2 * Math.PI / n; pts.push([x + R * Math.cos(t), y + R * Math.sin(t)]); }
+    return pts;
+  }
+  function rotPts(x, y, a, rel) {
+    const c = Math.cos(a), s = Math.sin(a);
+    return rel.map(([u, v]) => [x + u * c - v * s, y + u * s + v * c]);
+  }
+  function itemShape(g, it) {
+    if (it.poly) return { type: 'poly', pts: it.poly };
+    const { x, y, s, a } = it;
+    if (it.dot) return { type: 'circle', x, y, r: s };
+    switch (g.shape) {
+      case 'carre': return { type: 'poly', pts: regPoly(x, y, s * 1.2533, 4, a + Math.PI / 4) };
+      case 'losange': return { type: 'poly', pts: regPoly(x, y, s * 1.2533, 4, a) };
+      case 'ellipse': return { type: 'ellipse', x, y, rx: s * 1.35, ry: s * 0.74, a };
+      case 'triangle': return { type: 'poly', pts: regPoly(x, y, s * 1.5551, 3, a - Math.PI / 2) };
+      case 'hexagone': return { type: 'poly', pts: regPoly(x, y, s * 1.0996, 6, a) };
+      case 'croix': { const L = s * 1.45, w = s * 0.52; return { type: 'poly', pts: rotPts(x, y, a, [[-w, -L], [w, -L], [w, -w], [L, -w], [L, w], [w, w], [w, L], [-w, L], [-w, w], [-L, w], [-L, -w], [-w, -w]]) }; }
+      case 'etoile': { const pts = [], Ro = s * 1.75, Ri = Ro * 0.42; for (let i = 0; i < 10; i++) { const t = a - Math.PI / 2 + i * Math.PI / 5, r = i % 2 ? Ri : Ro; pts.push([x + r * Math.cos(t), y + r * Math.sin(t)]); } return { type: 'poly', pts }; }
+      case 'tiret': { const L = s * 1.6, w = s * 0.49; return { type: 'poly', pts: rotPts(x, y, a, [[-L, -w], [L, -w], [L, w], [-L, w]]) }; }
+      default: return { type: 'circle', x, y, r: s };
+    }
+  }
+  function addShape(ctx, sh) {
+    if (sh.type === 'circle') { ctx.moveTo(sh.x + sh.r, sh.y); ctx.arc(sh.x, sh.y, sh.r, 0, Math.PI * 2); }
+    else if (sh.type === 'ellipse') { ctx.moveTo(sh.x + sh.rx * Math.cos(sh.a), sh.y + sh.rx * Math.sin(sh.a)); ctx.ellipse(sh.x, sh.y, sh.rx, sh.ry, sh.a, 0, Math.PI * 2); }
+    else { const p = sh.pts; ctx.moveTo(p[0][0], p[0][1]); for (let i = 1; i < p.length; i++) ctx.lineTo(p[i][0], p[i][1]); ctx.closePath(); }
+  }
+  const r1 = (n) => Math.round(n * 10) / 10;
+  function shapePath(sh) {
+    if (sh.type === 'circle') { const r = r1(sh.r); return `M${r1(sh.x - sh.r)} ${r1(sh.y)}a${r} ${r} 0 1 0 ${r1(2 * sh.r)} 0a${r} ${r} 0 1 0 ${r1(-2 * sh.r)} 0Z`; }
+    if (sh.type === 'ellipse') {
+      const c = Math.cos(sh.a), s = Math.sin(sh.a), deg = r1(sh.a * 180 / Math.PI), rx = r1(sh.rx), ry = r1(sh.ry);
+      const p1 = `${r1(sh.x - sh.rx * c)} ${r1(sh.y - sh.rx * s)}`, p2 = `${r1(sh.x + sh.rx * c)} ${r1(sh.y + sh.rx * s)}`;
+      return `M${p1}A${rx} ${ry} ${deg} 1 0 ${p2}A${rx} ${ry} ${deg} 1 0 ${p1}Z`;
+    }
+    return 'M' + sh.pts.map(p => `${r1(p[0])} ${r1(p[1])}`).join('L') + 'Z';
+  }
+  function drawHalftone(ctx, g) {
+    for (const pl of g.plates) {
+      if (g.cmyk || !g.color) {
+        ctx.globalCompositeOperation = g.cmyk ? 'multiply' : 'source-over';
+        ctx.fillStyle = g.cmyk ? pl.color : state.ink;
+        ctx.beginPath(); for (const it of pl.items) addShape(ctx, itemShape(g, it)); ctx.fill();
+      } else {
+        for (const it of pl.items) { ctx.fillStyle = toHex(it.col[0], it.col[1], it.col[2]); ctx.beginPath(); addShape(ctx, itemShape(g, it)); ctx.fill(); }
+      }
+    }
+    ctx.globalCompositeOperation = 'source-over';
+  }
+  function halftoneSVG(g) {
+    const out = [];
+    for (const pl of g.plates) {
+      if (g.cmyk || !g.color) {
+        const d = pl.items.map(it => shapePath(itemShape(g, it))).join('');
+        if (d) out.push(`<path fill="${g.cmyk ? pl.color : state.ink}"${g.cmyk ? ' style="mix-blend-mode:multiply"' : ''} d="${d}"/>`);
+      } else {
+        for (const it of pl.items) {
+          const sh = itemShape(g, it), f = toHex(it.col[0], it.col[1], it.col[2]);
+          out.push(sh.type === 'circle' ? `<circle cx="${r1(sh.x)}" cy="${r1(sh.y)}" r="${r1(sh.r)}" fill="${f}"/>` : `<path fill="${f}" d="${shapePath(sh)}"/>`);
+        }
+      }
+    }
+    return out.join('\n');
+  }
+  const drawEffect = (ctx, g) => g.kind === 'halftone' ? drawHalftone(ctx, g) : drawGlyphs(ctx, g);
+
+  /* ---------- Dégradé ---------- */
+  // w = poids de l'effet (1 = effet complet, 0 = image intacte), selon la position t (0 → 1) le long du dégradé
+  const ONE = 'one';
+
+  // Courbe de progression : Bézier cubique de (0, 1) à (1, 0) dans l'espace (position dans la transition, intensité de l'effet)
+  const CURVES = {
+    douce: [0.42, 1, 0.58, 0],
+    lineaire: [0.33, 0.67, 0.67, 0.33],
+    persistante: [0.75, 1, 0.95, 0.5],
+    breve: [0.05, 0.5, 0.3, 0]
+  };
+  let profLUT = null, profKey = '';
+  function profile(u) {
+    const key = state.gCurve.join(',');
+    if (key !== profKey) {
+      const [x1, y1, x2, y2] = state.gCurve;
+      const bx = (s) => 3 * (1 - s) * (1 - s) * s * x1 + 3 * (1 - s) * s * s * x2 + s * s * s;
+      const by = (s) => (1 - s) ** 3 + 3 * (1 - s) * (1 - s) * s * y1 + 3 * (1 - s) * s * s * y2;
+      profLUT = new Float32Array(257);
+      for (let k = 0; k <= 256; k++) {
+        const x = k / 256; let lo = 0, hi = 1;
+        for (let it = 0; it < 24; it++) { const m = (lo + hi) / 2; if (bx(m) < x) lo = m; else hi = m; }
+        profLUT[k] = clamp(by((lo + hi) / 2), 0, 1);
+      }
+      profKey = key;
+    }
+    if (u <= 0) return profLUT[0];
+    if (u >= 1) return profLUT[256];
+    const f = u * 256, i = f | 0;
+    return profLUT[i] + (profLUT[i + 1] - profLUT[i]) * (f - i);
+  }
+  const invW = (w) => state.gInvert ? 1 - w : w;
+  // u = position dans la zone de transition (0 = début, côté effet ; 1 = fin, côté original)
+  function uFromT(t) {
+    const p = state.gPos / 100, h = state.gSoft / 200;
+    if (h < 0.001) return t < p ? 0 : 1;
+    return (t - (p - h)) / (2 * h);
+  }
+  // points du dégradé pour la forme « droite » (dégradés vectoriels CSS / SVG / canvas)
+  function gradPoints() {
+    const p = state.gPos / 100, h = state.gSoft / 200;
+    if (h < 0.001) return [{ t: 0, w: invW(1) }, { t: p, w: invW(1) }, { t: p, w: invW(0) }, { t: 1, w: invW(0) }];
+    const a = p - h, b = p + h;
+    const pts = [{ t: 0, w: invW(profile(uFromT(0))) }];
+    for (let i = 0; i <= 48; i++) { const t = a + (b - a) * i / 48; if (t > 0 && t < 1) pts.push({ t, w: invW(profile(i / 48)) }); }
+    pts.push({ t: 1, w: invW(profile(uFromT(1))) });
+    return pts;
+  }
+  const isVector = () => state.gShape === 'droite';
+
+  /* ----- Tracé à la plume : courbes de Bézier (points d'ancrage + poignées) ----- */
+  // nœud : { x, y, hin: [dx, dy], hout: [dx, dy], smooth } en coordonnées relatives (0 → 1)
+  const segCount = () => { const n = state.gPath.nodes.length; return n < 2 ? 0 : state.gPath.closed ? n : n - 1; };
+  function segPts(i, W, H) {
+    const N = state.gPath.nodes, a = N[i], b = N[(i + 1) % N.length];
+    return [[a.x * W, a.y * H], [(a.x + a.hout[0]) * W, (a.y + a.hout[1]) * H], [(b.x + b.hin[0]) * W, (b.y + b.hin[1]) * H], [b.x * W, b.y * H]];
+  }
+  function bez(P, t) {
+    const u = 1 - t, a = u * u * u, b = 3 * u * u * t, c = 3 * u * t * t, d = t * t * t;
+    return [a * P[0][0] + b * P[1][0] + c * P[2][0] + d * P[3][0], a * P[0][1] + b * P[1][1] + c * P[2][1] + d * P[3][1]];
+  }
+  function flattenPath(W, H, steps = 28) {
+    const out = [], n = segCount();
+    if (!n) return out;
+    out.push([state.gPath.nodes[0].x * W, state.gPath.nodes[0].y * H]);
+    for (let i = 0; i < n; i++) { const P = segPts(i, W, H); for (let k = 1; k <= steps; k++) out.push(bez(P, k / steps)); }
+    return out;
+  }
+  const pathValid = () => state.gPath.closed ? state.gPath.nodes.length >= 2 : state.gPath.nodes.length >= 2;
+  // polygone à remplir : la forme fermée, ou pour un tracé ouvert le côté gauche du tracé prolongé jusqu'aux bords
+  function pathPolygon(W, H) {
+    const P = flattenPath(W, H);
+    if (state.gPath.closed) return P;
+    const BIG = 6 * (W + H), n = P.length;
+    const dir = (a, b) => { const dx = b[0] - a[0], dy = b[1] - a[1], l = Math.hypot(dx, dy) || 1; return [dx / l, dy / l]; };
+    let k = 1; while (k < n - 1 && Math.hypot(P[k][0] - P[0][0], P[k][1] - P[0][1]) < 1e-6) k++;
+    let j = n - 2; while (j > 0 && Math.hypot(P[n - 1][0] - P[j][0], P[n - 1][1] - P[j][1]) < 1e-6) j--;
+    const ds = dir(P[0], P[k]), de = dir(P[j], P[n - 1]);
+    const S = [P[0][0] - ds[0] * BIG, P[0][1] - ds[1] * BIG], E = [P[n - 1][0] + de[0] * BIG, P[n - 1][1] + de[1] * BIG];
+    // normale « gauche » (au-dessus quand on trace de gauche à droite)
+    const El = [E[0] + de[1] * BIG, E[1] - de[0] * BIG], Sl = [S[0] + ds[1] * BIG, S[1] - ds[0] * BIG];
+    return [S, ...P, E, El, Sl];
+  }
+  // flou boîte séparable (3 passes ≈ flou gaussien), en place
+  function boxBlur(a, w, h, r) {
+    const tmp = new Float32Array(a.length);
+    for (let pass = 0; pass < 3; pass++) {
+      for (let y = 0; y < h; y++) {
+        const o = y * w; let s = 0;
+        for (let x = -r; x <= r; x++) s += a[o + clamp(x, 0, w - 1)];
+        for (let x = 0; x < w; x++) { tmp[o + x] = s / (2 * r + 1); s += a[o + Math.min(w - 1, x + r + 1)] - a[o + Math.max(0, x - r)]; }
+      }
+      for (let x = 0; x < w; x++) {
+        let s = 0;
+        for (let y = -r; y <= r; y++) s += tmp[clamp(y, 0, h - 1) * w + x];
+        for (let y = 0; y < h; y++) { a[y * w + x] = s / (2 * r + 1); s += tmp[Math.min(h - 1, y + r + 1) * w + x] - tmp[Math.max(0, y - r) * w + x]; }
+      }
+    }
+  }
+  // masque « intérieur » du tracé : 1 côté effet, 0 côté original, adouci selon la largeur du fondu
+  function pathInside(mw, mh) {
+    const c = document.createElement('canvas'); c.width = mw; c.height = mh;
+    const x = c.getContext('2d', { willReadFrequently: true }), poly = pathPolygon(mw, mh);
+    x.fillStyle = '#fff'; x.beginPath(); x.moveTo(poly[0][0], poly[0][1]);
+    for (let i = 1; i < poly.length; i++) x.lineTo(poly[i][0], poly[i][1]);
+    x.closePath(); x.fill();
+    const px = x.getImageData(0, 0, mw, mh).data, a = new Float32Array(mw * mh);
+    for (let i = 0; i < a.length; i++) a[i] = px[i * 4 + 3] / 255;
+    const r = Math.round(state.gSoft / 200 * Math.hypot(mw, mh) * 0.5);
+    if (r >= 1) boxBlur(a, mw, mh, r);
+    return a;
+  }
+
+  // Champ d'intensité de l'effet (0 → 1) calculé pixel par pixel, pour les formes vague et libre
+  let fieldCache = { key: '', data: null };
+  function weightField(W, H, maxDim) {
+    const k = Math.min(1, maxDim / Math.max(W, H));
+    const mw = Math.max(1, Math.round(W * k)), mh = Math.max(1, Math.round(H * k));
+    const key = [mw, mh, W, H, state.gShape, state.gType, state.gAngle, state.gPos, state.gSoft, state.gInvert,
+      state.gAmp, state.gFreq, state.gPhase, state.gCurve.join(','), JSON.stringify(state.gPath)].join('|');
+    if (fieldCache.key === key) return fieldCache.data;
+    const f = new Float32Array(mw * mh), sx = W / mw, sy = H / mh;
+    if (state.gShape === 'libre') {
+      if (!pathValid()) f.fill(invW(1));
+      else { const ins = pathInside(mw, mh); for (let i = 0; i < f.length; i++) f[i] = invW(profile(1 - ins[i])); }
+    } else {
+      const amp = state.gAmp / 100 * 0.25, ph = state.gPhase * Math.PI / 180, wave = state.gShape === 'vague';
+      if (state.gType === 'radial') {
+        const R = Math.hypot(W, H) / 2, n = Math.max(1, Math.round(state.gFreq));
+        for (let y = 0; y < mh; y++) for (let x = 0; x < mw; x++) {
+          const rx = (x + 0.5) * sx - W / 2, ry = (y + 0.5) * sy - H / 2;
+          let t = Math.hypot(rx, ry) / R;
+          if (wave) t += amp * Math.sin(n * Math.atan2(ry, rx) + ph);
+          f[y * mw + x] = invW(profile(uFromT(t)));
+        }
+      } else {
+        const th = state.gAngle * Math.PI / 180, dx = Math.cos(th), dy = Math.sin(th);
+        const L = (Math.abs(W * dx) + Math.abs(H * dy)) / 2 || 1, Lp = (Math.abs(W * dy) + Math.abs(H * dx)) / 2 || 1;
+        for (let y = 0; y < mh; y++) for (let x = 0; x < mw; x++) {
+          const rx = (x + 0.5) * sx - W / 2, ry = (y + 0.5) * sy - H / 2;
+          let t = ((rx * dx + ry * dy) / L + 1) / 2;
+          if (wave) t += amp * Math.sin(2 * Math.PI * state.gFreq * (((ry * dx - rx * dy) / Lp + 1) / 2) + ph);
+          f[y * mw + x] = invW(profile(uFromT(t)));
+        }
+      }
+    }
+    fieldCache = { key, data: { mw, mh, f } };
+    return fieldCache.data;
+  }
+  function maskCanvas(field, fn) {
+    const { mw, mh, f } = field;
+    const c = document.createElement('canvas'); c.width = mw; c.height = mh;
+    const ctx = c.getContext('2d'), img = ctx.createImageData(mw, mh), d = img.data;
+    for (let i = 0, j = 0; i < f.length; i++, j += 4) { d[j] = d[j + 1] = d[j + 2] = 255; d[j + 3] = fn(f[i]) * 255; }
+    ctx.putImageData(img, 0, 0);
+    return c;
+  }
+  const maskDataURL = (fn, W, H) => maskCanvas(weightField(W, H, 1400), fn).toDataURL('image/png');
+  // masques des trois couches : photo d'origine, papier, caractères
+  function gradMasks(solid) {
+    const fondu = state.gStyle === 'fondu';
+    return {
+      photo: solid ? ONE : (fondu ? (w) => 1 - w : (w) => clamp(2 - 2 * w, 0, 1)),
+      paper: solid ? (fondu ? (w) => w : (w) => clamp(2 * w - 1, 0, 1)) : null,
+      glyph: fondu ? (w) => w : (w) => clamp(2 * w, 0, 1)
+    };
+  }
+  const round3 = (n) => Math.round(n * 1000) / 1000;
+  const maskStops = (fn) => gradPoints().map(p => ({ t: round3(clamp(p.t, 0, 1)), a: round3(fn(p.w)) }));
+  function gradGeom(W, H) {
+    if (state.gType === 'radial') return { type: 'radial', cx: W / 2, cy: H / 2, r: Math.hypot(W, H) / 2 };
+    const th = state.gAngle * Math.PI / 180, dx = Math.cos(th), dy = Math.sin(th);
+    const L = (Math.abs(W * dx) + Math.abs(H * dy)) / 2;
+    return { type: 'linear', x1: W / 2 - dx * L, y1: H / 2 - dy * L, x2: W / 2 + dx * L, y2: H / 2 + dy * L };
+  }
+  function cssGradient(fn) {
+    const stops = maskStops(fn).map(s => `rgba(0,0,0,${s.a}) ${round2(s.t * 100)}%`).join(',');
+    return state.gType === 'radial'
+      ? `radial-gradient(circle farthest-corner at 50% 50%,${stops})`
+      : `linear-gradient(${(state.gAngle + 90) % 360}deg,${stops})`;
+  }
+  const tmpCan = document.createElement('canvas');
+  function maskedLayer(ctx, W, H, fn, paint, maxDim, op) {
+    if (!fn) return;
+    if (tmpCan.width !== W) tmpCan.width = W;
+    if (tmpCan.height !== H) tmpCan.height = H;
+    const lc = tmpCan.getContext('2d');
+    lc.setTransform(1, 0, 0, 1, 0, 0); lc.globalCompositeOperation = 'source-over'; lc.clearRect(0, 0, W, H);
+    paint(lc);
+    lc.setTransform(1, 0, 0, 1, 0, 0);
+    if (fn !== ONE) {
+      lc.globalCompositeOperation = 'destination-in';
+      if (isVector()) {
+        const G = gradGeom(W, H);
+        const gr = G.type === 'radial' ? lc.createRadialGradient(G.cx, G.cy, 0, G.cx, G.cy, G.r) : lc.createLinearGradient(G.x1, G.y1, G.x2, G.y2);
+        for (const s of maskStops(fn)) gr.addColorStop(s.t, `rgba(0,0,0,${s.a})`);
+        lc.fillStyle = gr; lc.fillRect(0, 0, W, H);
+      } else {
+        lc.imageSmoothingEnabled = true; lc.imageSmoothingQuality = 'high';
+        lc.drawImage(maskCanvas(weightField(W, H, maxDim), fn), 0, 0, W, H);
+      }
+      lc.globalCompositeOperation = 'source-over';
+    }
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.globalCompositeOperation = op || 'source-over'; ctx.drawImage(tmpCan, 0, 0); ctx.globalCompositeOperation = 'source-over';
+  }
+  const photoSource = () => state.cut ? source : rawSource;
+
+  /* ---------- Dessin canvas ---------- */
+  let glyphCache = { g: null, c: null };
+  function draw(ctx, g, s, opaque, maxDim = 1400) {
+    const c = ctx.canvas;
+    c.width = Math.max(1, Math.round(g.W * s)); c.height = Math.max(1, Math.round(g.H * s));
+    const W = c.width, H = c.height;
+    const solid = opaque || !state.transparent;
+    ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, W, H);
+    if (solid) { ctx.fillStyle = state.paper; ctx.fillRect(0, 0, W, H); }
+    // calque de l'effet ; à l'échelle 1 (aperçu) il est gardé en cache : bouger le dégradé ou les effets d'écran ne le redessine pas
+    let eff;
+    if (s === 1 && glyphCache.g === g && glyphCache.c.width === W) eff = glyphCache.c;
+    else {
+      eff = document.createElement('canvas'); eff.width = W; eff.height = H;
+      const ec = eff.getContext('2d'); ec.setTransform(s, 0, 0, s, 0, 0); drawEffect(ec, g);
+      if (s === 1) glyphCache = { g, c: eff };
+    }
+    const glow = state.fxGlow > 0;
+    if (!state.grad) {
+      ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.drawImage(eff, 0, 0);
+      if (glow) { ctx.globalCompositeOperation = 'lighter'; paintGlow(ctx, eff, s, W, H); ctx.globalCompositeOperation = 'source-over'; }
+    } else {
+      const m = gradMasks(solid);
+      maskedLayer(ctx, W, H, m.photo, (lc) => { lc.imageSmoothingQuality = 'high'; lc.drawImage(photoSource(), 0, 0, W, H); }, maxDim);
+      maskedLayer(ctx, W, H, m.paper, (lc) => { lc.fillStyle = state.paper; lc.fillRect(0, 0, W, H); }, maxDim);
+      maskedLayer(ctx, W, H, m.glyph, (lc) => lc.drawImage(eff, 0, 0), maxDim);
+      if (glow) maskedLayer(ctx, W, H, m.glyph, (lc) => paintGlow(lc, eff, s, W, H), maxDim, 'lighter');
+    }
+    postFX(ctx, g, s, W, H, solid);
+  }
+
+  /* ---------- Néon & écran ---------- */
+  const fxCans = {};
+  function fxCanvas(name, W, H) {
+    let c = fxCans[name];
+    if (!c) { c = fxCans[name] = document.createElement('canvas'); }
+    if (c.width !== W) c.width = W;
+    if (c.height !== H) c.height = H;
+    const x = c.getContext('2d'); x.setTransform(1, 0, 0, 1, 0, 0); x.globalCompositeOperation = 'source-over'; x.globalAlpha = 1; x.clearRect(0, 0, W, H);
+    return [c, x];
+  }
+  // Lueur : copie floue de l'effet ajoutée par-dessus (mode additif), comme un néon qui bave
+  function paintGlow(lc, eff, s, W, H) {
+    const r = state.fxGlowR * s, k = Math.max(1, r / 2);
+    const [sm, sx] = fxCanvas('glow', Math.max(1, Math.round(W / k)), Math.max(1, Math.round(H / k)));
+    sx.imageSmoothingEnabled = true; sx.imageSmoothingQuality = 'high';
+    if ('filter' in sx) sx.filter = 'blur(1.2px)';
+    sx.drawImage(eff, 0, 0, sm.width, sm.height);
+    if ('filter' in sx) sx.filter = 'none';
+    lc.save(); lc.setTransform(1, 0, 0, 1, 0, 0);
+    lc.imageSmoothingEnabled = true; lc.imageSmoothingQuality = 'high';
+    let left = state.fxGlow / 100;
+    while (left > 0.001) { lc.globalAlpha = Math.min(1, left); lc.drawImage(sm, 0, 0, W, H); left -= 1; }
+    lc.restore();
+  }
+  // pas de la grille d'écran : calé sur la trame (ou la grille de caractères) ou libre
+  function gridPitch(g) {
+    if (!state.fxGridSync) return [state.fxGridSize, state.fxGridSize];
+    return g.kind === 'halftone' ? [state.htCell, state.htCell] : [g.cw, g.lh];
+  }
+  let grainTile = null;
+  function getGrainTile() {
+    if (grainTile) return grainTile;
+    const c = document.createElement('canvas'); c.width = c.height = 256;
+    const x = c.getContext('2d'), img = x.createImageData(256, 256), d = img.data;
+    for (let i = 0, j = 0; i < 65536; i++, j += 4) { const v = rnd(i % 256, (i / 256) | 0, 9) * 255; d[j] = d[j + 1] = d[j + 2] = v; d[j + 3] = 255; }
+    x.putImageData(img, 0, 0);
+    return (grainTile = c);
+  }
+  function postFX(ctx, g, s, W, H, solid) {
+    ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0);
+    // aberration chromatique : rouge décalé d'un côté, vert + bleu de l'autre
+    if (state.fxChroma > 0) {
+      const d = state.fxChroma * s;
+      const [src, sx] = fxCanvas('caSrc', W, H); sx.drawImage(ctx.canvas, 0, 0);
+      const [rc, rx] = fxCanvas('caR', W, H);
+      rx.drawImage(src, 0, 0); rx.globalCompositeOperation = 'multiply'; rx.fillStyle = '#ff0000'; rx.fillRect(0, 0, W, H);
+      rx.globalCompositeOperation = 'destination-in'; rx.drawImage(src, 0, 0);
+      const [gc, gx] = fxCanvas('caGB', W, H);
+      gx.drawImage(src, 0, 0); gx.globalCompositeOperation = 'multiply'; gx.fillStyle = '#00ffff'; gx.fillRect(0, 0, W, H);
+      gx.globalCompositeOperation = 'destination-in'; gx.drawImage(src, 0, 0);
+      ctx.clearRect(0, 0, W, H);
+      ctx.globalCompositeOperation = 'lighter'; ctx.drawImage(rc, d, 0); ctx.drawImage(gc, -d, 0);
+      ctx.globalCompositeOperation = 'source-over';
+    }
+    // les calques d'écran ne s'impriment que sur le contenu (fond transparent préservé)
+    ctx.globalCompositeOperation = 'source-atop';
+    if (state.fxGrid > 0) {
+      const [px, py] = gridPitch(g).map(v => v * s), lw = Math.max(1, Math.min(px, py) * state.fxGridW / 100);
+      ctx.fillStyle = `rgba(0,0,0,${state.fxGrid / 100})`;
+      ctx.beginPath();
+      for (let x = 0; x < W; x += px) ctx.rect(x, 0, lw, H);
+      for (let y = 0; y < H; y += py) ctx.rect(0, y, W, lw);
+      ctx.fill();
+    }
+    if (state.fxScan > 0) {
+      const p = state.fxScanGap * s;
+      ctx.fillStyle = `rgba(0,0,0,${state.fxScan / 100})`;
+      ctx.beginPath(); for (let y = 0; y < H; y += p) ctx.rect(0, y + p / 2, W, p / 2); ctx.fill();
+    }
+    if (state.fxVig > 0) {
+      const R = Math.hypot(W, H) / 2, gr = ctx.createRadialGradient(W / 2, H / 2, R * 0.35, W / 2, H / 2, R);
+      gr.addColorStop(0, 'rgba(0,0,0,0)'); gr.addColorStop(1, `rgba(0,0,0,${state.fxVig / 100})`);
+      ctx.fillStyle = gr; ctx.fillRect(0, 0, W, H);
+    }
+    if (state.fxGrain > 0) {
+      const pat = ctx.createPattern(getGrainTile(), 'repeat');
+      if (pat.setTransform) pat.setTransform(new DOMMatrix().scale(Math.max(1, s)));
+      ctx.globalCompositeOperation = solid ? 'overlay' : 'source-atop';
+      ctx.globalAlpha = state.fxGrain / 100 * (solid ? 1 : 0.4);
+      ctx.fillStyle = pat; ctx.fillRect(0, 0, W, H);
+    }
+    ctx.restore();
+  }
+  function drawGlyphs(ctx, g) {
+    ctx.font = fontStr(state.size, state.weight); ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    const color = perCell();
+    if (!color) ctx.fillStyle = state.ink;
+    let last = -1;
+    for (let r = 0; r < g.rows; r++) {
+      const y = (r + 0.5) * g.lh;
+      for (let x = 0; x < g.cols; x++) {
+        const i = r * g.cols + x, ch = g.glyph[i];
+        if (ch === ' ') continue;
+        if (color) {
+          const k = i * 3, key = (g.col[k] << 16) | (g.col[k + 1] << 8) | g.col[k + 2];
+          if (key !== last) { ctx.fillStyle = toHex(g.col[k], g.col[k + 1], g.col[k + 2]); last = key; }
+        }
+        ctx.fillText(ch, (x + 0.5) * g.cw, y);
+      }
+    }
+  }
+
+  /* ---------- Rendu ---------- */
+  let renderId = 0, fontRetries = 0, pending = false, gradPending = false, dragging = false;
+  const previewDim = () => dragging ? 320 : 760;
+  function schedule() {
+    if (pending) return; pending = true;
+    requestAnimationFrame(() => { pending = false; render(); });
+  }
+  // changement du dégradé seul : on recompose sans recalculer la grille de caractères
+  function scheduleGrad() {
+    if (pending || gradPending) return; gradPending = true;
+    requestAnimationFrame(() => {
+      gradPending = false;
+      if (!grid || pending) { schedule(); return; }
+      draw(octx, grid, 1, false, previewDim());
+    });
+  }
+  async function render() {
+    if (!rawSource) return;
+    if (cutDirty) { applyCutout(); drawCutPreview(); }
+    const id = ++renderId;
+    let ready = true;
+    if (state.effect === 'halftone') {
+      grid = computeHalftone();
+    } else {
+      const chars = getChars();
+      ready = await ensureFont(chars);
+      if (id !== renderId) return;
+      const dens = measureDensity(chars, ready);
+      const lut = buildLUT(chars, dens);
+      grid = computeGrid(chars, lut);
+    }
+    draw(octx, grid, 1, false, previewDim());
+    out.classList.toggle('checker', state.transparent);
+    drawOrig();
+    updateStats();
+    if (!ready && fontRetries < 4) { fontRetries++; setTimeout(schedule, 500); }
+  }
+  // Image d'origine, à la même taille que le résultat (vue avant / après)
+  const orig = $('#orig');
+  function drawOrig() {
+    if (!grid || !rawSource) return;
+    if (orig.width !== grid.W) orig.width = grid.W;
+    if (orig.height !== grid.H) orig.height = grid.H;
+    const ctx = orig.getContext('2d');
+    ctx.clearRect(0, 0, grid.W, grid.H);
+    ctx.imageSmoothingQuality = 'high';
+    // détourage actif : on montre l'image découpée sur damier pour guider les réglages
+    ctx.drawImage(state.cut ? source : rawSource, 0, 0, grid.W, grid.H);
+    $('.pane.before figcaption').textContent = state.cut ? 'Avant · détouré' : 'Avant';
+    orig.setAttribute('aria-label', state.cut ? "Image d'origine détourée" : "Image d'origine");
+  }
+  function updateStats() {
+    if (!grid) return;
+    let html;
+    if (grid.kind === 'halftone') {
+      const what = { points: 'points', lignes: 'segments de ligne', pointillisme: 'points' }[grid.type];
+      html = `<b>${fmt(grid.count)}</b> ${what}${grid.cmyk ? ' (4 encres)' : ''} · trame ${state.htCell} px · ${fmt(grid.W)} × ${fmt(grid.H)} px`;
+      if (grid.count > 150000) html += ` · <span class="warn">trame très fine, le rendu ralentit</span>`;
+    } else {
+      html = `<b>${fmt(grid.cols)} × ${fmt(grid.rows)}</b> caractères · ${fmt(grid.count)} glyphes · ${fmt(grid.W)} × ${fmt(grid.H)} px`;
+      if (grid.cols * grid.rows > 250000) html += ` · <span class="warn">grille très dense, le rendu ralentit</span>`;
+    }
+    $('#stats').innerHTML = html;
+    $('#o-scale').textContent = `${fmt(grid.W * state.scale)} × ${fmt(grid.H * state.scale)} px`;
+  }
+
+  /* ---------- Chargement d'image ---------- */
+  function loadFile(file) {
+    if (!file) return;
+    if (!/^image\//.test(file.type)) { toast("Ce fichier n'est pas une image. Choisis un JPEG, PNG, WebP, GIF ou SVG."); return; }
+    const reader = new FileReader();
+    reader.onload = () => {
+      const img = new Image();
+      img.onload = () => {
+        let w = img.naturalWidth, h = img.naturalHeight;
+        if (!w || !h) { w = 1000; h = 1000; }
+        const c = document.createElement('canvas');
+        const k = Math.min(1, 1800 / Math.max(w, h));
+        c.width = Math.max(1, Math.round(w * k)); c.height = Math.max(1, Math.round(h * k));
+        c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+        setSource(c, file.name);
+        toast('Image chargée : ' + file.name);
+      };
+      img.onerror = () => toast("Impossible de lire cette image. Essaie un JPEG ou un PNG.");
+      img.src = reader.result;
+    };
+    reader.onerror = () => toast("Impossible de lire ce fichier.");
+    reader.readAsDataURL(file);
+  }
+  function setSource(canvas, name) {
+    rawSource = canvas; rawData = null; source = canvas; sourceId++; cutDirty = true;
+    if (!state.cutAuto) { state.cutAuto = true; }
+    sourceName = (name || 'image').replace(/\.[^.]+$/, '').replace(/[^\w\-]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 60) || 'image';
+    $('#srcName').textContent = name;
+    $('#srcName').title = name;
+    schedule();
+  }
+
+  /* ---------- Exports ---------- */
+  let dlPromise = null;
+  function getDownloads() {
+    if (!dlPromise) {
+      dlPromise = (window.claude && typeof window.claude.use === 'function')
+        ? window.claude.use('downloads').catch(() => null)
+        : Promise.resolve(null);
+    }
+    return dlPromise;
+  }
+  async function saveFile(filename, data) {
+    const dl = await getDownloads();
+    if (!dl) {
+      try {
+        const blob = data instanceof Blob ? data : new Blob([data]);
+        const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = filename;
+        document.body.appendChild(a); a.click(); a.remove();
+        setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+        toast('Téléchargement lancé : ' + filename);
+      } catch (e) { toast("Le téléchargement n'est pas disponible ici. Utilise « Copier le code »."); }
+      return;
+    }
+    try {
+      await dl.save({ filename, data });
+      toast('Fichier enregistré : ' + filename);
+    } catch (e) {
+      const code = e && e.code;
+      if (code === 'declined') toast('Export annulé.');
+      else if (code === 'rate_limited') toast("Une fenêtre d'enregistrement est déjà ouverte.");
+      else if (code === 'too_large') toast('Fichier trop lourd : baisse la résolution ou la largeur de sortie.');
+      else toast("L'export n'a pas abouti. Réessaie dans un instant.");
+    }
+  }
+
+  async function exportRaster(type) {
+    if (!grid) return;
+    const c = document.createElement('canvas');
+    draw(c.getContext('2d'), grid, state.scale, type === 'jpeg');
+    const blob = await new Promise((r) => c.toBlob(r, type === 'jpeg' ? 'image/jpeg' : 'image/png', 0.92));
+    if (!blob) { toast("L'image est trop grande pour ce navigateur. Baisse la résolution d'export."); return; }
+    saveFile(`${sourceName}-glyphotrame.${type === 'jpeg' ? 'jpg' : 'png'}`, blob);
+  }
+
+  function fontImport() { return `https://fonts.googleapis.com/css2?family=${FONTS[state.font].gf}&display=swap`; }
+
+  // photo d'origine intégrée aux exports SVG / HTML quand le dégradé est actif
+  function photoDataURL(W, H) {
+    const c = document.createElement('canvas'); c.width = W; c.height = H;
+    const x = c.getContext('2d'); x.imageSmoothingQuality = 'high';
+    x.drawImage(photoSource(), 0, 0, W, H);
+    return state.cut ? c.toDataURL('image/png') : c.toDataURL('image/jpeg', 0.88);
+  }
+
+  function buildSVG(g) {
+    const f = FONTS[state.font];
+    const color = perCell();
+    const lines = [];
+    const ht = g.kind === 'halftone';
+    lines.push(`<svg xmlns="http://www.w3.org/2000/svg" width="${g.W}" height="${g.H}" viewBox="0 0 ${g.W} ${g.H}" role="img" aria-label="${ht ? 'Image en trame halftone' : 'Image en caractères'}">`);
+    if (!ht) lines.push(`<style>@import url('${fontImport().replace(/&/g, '&amp;')}');text{font-family:'${f.family}',${f.fallback};font-weight:${state.weight};font-size:${state.size}px;text-anchor:middle;dominant-baseline:central}</style>`);
+    const solid = !state.transparent;
+    const headLen = lines.length;
+    if (solid) lines.push(`<rect width="100%" height="100%" fill="${state.paper}"/>`);
+    let glyphMask = '';
+    const glOpen = state.fxGlow > 0 ? '<g filter="url(#fx-glow)">' : '', glClose = glOpen ? '</g>' : '';
+    if (state.grad) {
+      const m = gradMasks(solid), G = gradGeom(g.W, g.H), defs = [];
+      const def = (id, fn) => {
+        if (!fn || fn === ONE) return '';
+        if (!isVector()) {
+          // forme vague ou courbe libre : masque en image
+          defs.push(`<mask id="m-${id}" maskUnits="userSpaceOnUse" x="0" y="0" width="${g.W}" height="${g.H}"><image href="${maskDataURL(fn, g.W, g.H)}" width="${g.W}" height="${g.H}" preserveAspectRatio="none"/></mask>`);
+          return ` mask="url(#m-${id})"`;
+        }
+        const stops = maskStops(fn).map(s => `<stop offset="${s.t}" stop-color="#fff" stop-opacity="${s.a}"/>`).join('');
+        defs.push(G.type === 'radial'
+          ? `<radialGradient id="g-${id}" gradientUnits="userSpaceOnUse" cx="${round2(G.cx)}" cy="${round2(G.cy)}" r="${round2(G.r)}">${stops}</radialGradient>`
+          : `<linearGradient id="g-${id}" gradientUnits="userSpaceOnUse" x1="${round2(G.x1)}" y1="${round2(G.y1)}" x2="${round2(G.x2)}" y2="${round2(G.y2)}">${stops}</linearGradient>`);
+        defs.push(`<mask id="m-${id}" maskUnits="userSpaceOnUse" x="0" y="0" width="${g.W}" height="${g.H}"><rect width="${g.W}" height="${g.H}" fill="url(#g-${id})"/></mask>`);
+        return ` mask="url(#m-${id})"`;
+      };
+      const mp = def('photo', m.photo), mq = def('paper', m.paper);
+      glyphMask = def('glyph', m.glyph);
+      if (defs.length) lines.push(`<defs>${defs.join('')}</defs>`);
+      lines.push(`<image href="${photoDataURL(g.W, g.H)}" x="0" y="0" width="${g.W}" height="${g.H}" preserveAspectRatio="none"${mp}/>`);
+      if (m.paper) lines.push(`<rect width="${g.W}" height="${g.H}" fill="${state.paper}"${mq}/>`);
+    }
+    if (ht) { lines.push(`<g${glyphMask}>${glOpen}`, halftoneSVG(g), `${glClose}</g>`); return finishSVG(lines, headLen, g, solid); }
+    lines.push((color ? `<g${glyphMask}>` : `<g fill="${state.ink}"${glyphMask}>`) + glOpen);
+    for (let r = 0; r < g.rows; r++) {
+      const y = round2((r + 0.5) * g.lh);
+      if (color) {
+        let row = '';
+        for (let x = 0; x < g.cols; x++) {
+          const i = r * g.cols + x, ch = g.glyph[i];
+          if (ch === ' ') continue;
+          const k = i * 3;
+          row += `<tspan x="${round2((x + 0.5) * g.cw)}" fill="${toHex(g.col[k], g.col[k + 1], g.col[k + 2])}">${esc(ch)}</tspan>`;
+        }
+        if (row) lines.push(`<text y="${y}">${row}</text>`);
+      } else {
+        const xs = [], txt = [];
+        for (let x = 0; x < g.cols; x++) {
+          const ch = g.glyph[r * g.cols + x];
+          if (ch === ' ') continue;
+          xs.push(round2((x + 0.5) * g.cw)); txt.push(esc(ch));
+        }
+        if (xs.length) lines.push(`<text x="${xs.join(' ')}" y="${y}">${txt.join('')}</text>`);
+      }
+    }
+    lines.push(`${glClose}</g>`);
+    return finishSVG(lines, headLen, g, solid);
+  }
+
+  // Effets néon & écran en SVG : filtres et motifs vectoriels, équivalents du rendu canvas
+  function finishSVG(lines, headLen, g, solid) {
+    const W = g.W, H = g.H, defs = [], over = [];
+    const fis = 'color-interpolation-filters="sRGB"';
+    if (state.fxGlow > 0) {
+      defs.push(`<filter id="fx-glow" x="-15%" y="-15%" width="130%" height="130%" ${fis}><feGaussianBlur in="SourceGraphic" stdDeviation="${r1(state.fxGlowR * 0.65)}" result="b"/><feComposite in="SourceGraphic" in2="b" operator="arithmetic" k1="0" k2="1" k3="${round2(state.fxGlow / 100)}" k4="0"/></filter>`);
+    }
+    if (state.fxChroma > 0) {
+      const d = state.fxChroma;
+      defs.push(`<filter id="fx-ca" x="0" y="0" width="100%" height="100%" ${fis}><feColorMatrix in="SourceGraphic" type="matrix" values="1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0" result="r"/><feOffset in="r" dx="${d}" result="r2"/><feColorMatrix in="SourceGraphic" type="matrix" values="0 0 0 0 0 0 1 0 0 0 0 0 1 0 0 0 0 0 1 0" result="gb"/><feOffset in="gb" dx="${-d}" result="gb2"/><feComposite in="r2" in2="gb2" operator="arithmetic" k1="0" k2="1" k3="1" k4="0"/></filter>`);
+    }
+    if (state.fxGrid > 0) {
+      const [px, py] = gridPitch(g), lw = r1(Math.max(1, Math.min(px, py) * state.fxGridW / 100));
+      defs.push(`<pattern id="fx-grid" width="${r1(px)}" height="${r1(py)}" patternUnits="userSpaceOnUse"><path d="M0 0H${r1(px)}V${lw}H0ZM0 ${lw}H${lw}V${r1(py)}H0Z" fill="#000"/></pattern>`);
+      over.push(`<rect width="${W}" height="${H}" fill="url(#fx-grid)" fill-opacity="${state.fxGrid / 100}"/>`);
+    }
+    if (state.fxScan > 0) {
+      const p = state.fxScanGap;
+      defs.push(`<pattern id="fx-scan" width="${W}" height="${p}" patternUnits="userSpaceOnUse"><rect y="${p / 2}" width="${W}" height="${p / 2}" fill="#000"/></pattern>`);
+      over.push(`<rect width="${W}" height="${H}" fill="url(#fx-scan)" fill-opacity="${state.fxScan / 100}"/>`);
+    }
+    if (state.fxVig > 0) {
+      defs.push(`<radialGradient id="fx-vig" gradientUnits="userSpaceOnUse" cx="${W / 2}" cy="${H / 2}" r="${r1(Math.hypot(W, H) / 2)}"><stop offset="0.35" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity="${state.fxVig / 100}"/></radialGradient>`);
+      over.push(`<rect width="${W}" height="${H}" fill="url(#fx-vig)"/>`);
+    }
+    if (state.fxGrain > 0) {
+      defs.push(`<filter id="fx-grain" x="0" y="0" width="100%" height="100%" ${fis}><feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="2" stitchTiles="stitch"/><feColorMatrix type="saturate" values="0"/><feComponentTransfer><feFuncA type="linear" slope="0" intercept="1"/></feComponentTransfer></filter>`);
+      over.push(`<rect width="${W}" height="${H}" filter="url(#fx-grain)" opacity="${round2(state.fxGrain / 100 * (solid ? 1 : 0.4))}"${solid ? ' style="mix-blend-mode:overlay"' : ''}/>`);
+    }
+    const head = lines.slice(0, headLen), body = lines.slice(headLen);
+    const out = head.slice();
+    if (defs.length) out.push(`<defs>${defs.join('')}</defs>`);
+    const needId = !solid && over.length;
+    out.push(`<g${needId ? ' id="fx-content"' : ''}${state.fxChroma > 0 ? ' filter="url(#fx-ca)"' : ''}>`, ...body, '</g>');
+    if (over.length) {
+      if (needId) {
+        // fond transparent : les calques d'écran ne s'appliquent que sur le contenu
+        out.push(`<mask id="fx-m" maskUnits="userSpaceOnUse" x="0" y="0" width="${W}" height="${H}" style="mask-type:alpha"><use href="#fx-content"/></mask>`, `<g mask="url(#fx-m)">`, ...over, '</g>');
+      } else out.push(...over);
+    }
+    out.push('</svg>');
+    return out.join('\n');
+  }
+
+  function buildHTML(g) {
+    if (g.kind === 'halftone') {
+      return `<!-- Glyphotrame · halftone ${g.type} · ${fmt(g.count)} éléments${state.grad ? ' · dégradé' : ''} -->
+<!-- Le SVG prend toute la largeur de son conteneur : change max-width pour le limiter. -->
+<style>
+.glyphotrame-halftone{width:100%;max-width:${g.W}px}
+.glyphotrame-halftone svg{display:block;width:100%;height:auto}
+</style>
+<div class="glyphotrame-halftone">
+${buildSVG(g)}
+</div>`;
+    }
+    const f = FONTS[state.font];
+    const color = perCell();
+    const cw = round2(g.cw), lh = round2(g.lh);
+    const rows = [];
+    for (let r = 0; r < g.rows; r++) {
+      let line = '', spaces = 0;
+      for (let x = 0; x < g.cols; x++) {
+        const i = r * g.cols + x, ch = g.glyph[i];
+        if (ch === ' ') { spaces++; continue; }
+        if (spaces) { line += spaces === 1 ? '<b></b>' : `<b style="--n:${spaces}"></b>`; spaces = 0; }
+        if (color) { const k = i * 3; line += `<i style="color:${toHex(g.col[k], g.col[k + 1], g.col[k + 2])}">${esc(ch)}</i>`; }
+        else line += `<i>${esc(ch)}</i>`;
+      }
+      rows.push(`<div>${line}</div>`);
+    }
+    const solid = !state.transparent;
+    const mask = (fn) => {
+      if (!fn || fn === ONE) return '';
+      if (isVector()) { const css = cssGradient(fn); return `-webkit-mask-image:${css};mask-image:${css};`; }
+      const url = `url("${maskDataURL(fn, g.W, g.H)}")`;
+      return `-webkit-mask-image:${url};mask-image:${url};-webkit-mask-size:100% 100%;mask-size:100% 100%;-webkit-mask-repeat:no-repeat;mask-repeat:no-repeat;`;
+    };
+    let gradCSS = '', gradHTML = '', rowsMask = '';
+    if (state.grad) {
+      const m = gradMasks(solid);
+      gradCSS = `
+.glyphotrame .gt-photo,.glyphotrame .gt-paper{position:absolute;inset:0;pointer-events:none}
+.glyphotrame .gt-photo{background:url("${photoDataURL(g.W, g.H)}") 0 0/100% 100% no-repeat;${mask(m.photo)}}${m.paper ? `
+.glyphotrame .gt-paper{background:${state.paper};${mask(m.paper)}}` : ''}`;
+      gradHTML = `<div class="gt-photo"></div>${m.paper ? '<div class="gt-paper"></div>' : ''}\n`;
+      rowsMask = mask(m.glyph);
+    }
+    return `<!-- Glyphotrame · ${g.cols} × ${g.rows} caractères · police ${f.family} ${state.weight}${state.grad ? ' · dégradé' : ''} -->
+<!-- Pour redimensionner, change --k (ex. --k:.5 pour la moitié, --k:2 pour le double). -->
+<link rel="stylesheet" href="${fontImport()}">
+<style>
+.glyphotrame{
+  --k:1;
+  --cw:calc(${cw}px * var(--k));
+  --lh:calc(${lh}px * var(--k));
+  position:relative;
+  width:calc(var(--cw) * ${g.cols});
+  max-width:none;
+  background:${solid ? state.paper : 'transparent'};
+  color:${state.ink};
+  font-family:"${f.family}",${f.fallback};
+  font-weight:${state.weight};
+  font-size:calc(${state.size}px * var(--k));
+  line-height:var(--lh);
+  user-select:none;
+}${gradCSS}
+.glyphotrame .gt-rows{position:relative;${rowsMask}${htmlShadow()}}${htmlOverlayCSS(g)}
+.glyphotrame .gt-rows>div{display:flex;height:var(--lh)}
+.glyphotrame i,.glyphotrame b{flex:none;display:flex;justify-content:center;width:var(--cw);font-style:normal;font-weight:inherit}
+.glyphotrame b{width:calc(var(--cw) * var(--n,1))}
+</style>
+<div class="glyphotrame" role="img" aria-label="Image composée de caractères">
+${gradHTML}<div class="gt-rows">
+${rows.join('\n')}
+</div>${htmlOverlayCSS(g) ? '\n<div class="gt-fx"></div>' : ''}
+</div>`;
+  }
+  // Néon en CSS : lueur et aberration chromatique en text-shadow
+  function htmlShadow() {
+    const sh = [];
+    if (state.fxChroma > 0) { const d = state.fxChroma; sh.push(`${-d}px 0 rgba(255,0,60,.6)`, `${d}px 0 rgba(0,220,255,.6)`); }
+    if (state.fxGlow > 0) {
+      const r = state.fxGlowR;
+      for (let i = 0; i < Math.ceil(state.fxGlow / 50); i++) sh.push(`0 0 ${r1(r * (0.6 + i * 0.5))}px currentColor`);
+    }
+    return sh.length ? `text-shadow:${sh.join(',')};` : '';
+  }
+  // Calques d'écran en CSS : grille, lignes de balayage, vignettage, grain
+  function htmlOverlayCSS(g) {
+    const bg = [];
+    if (state.fxGrid > 0) {
+      const [px, py] = gridPitch(g), lw = r1(Math.max(1, Math.min(px, py) * state.fxGridW / 100)), a = state.fxGrid / 100;
+      bg.push(`linear-gradient(90deg,rgba(0,0,0,${a}) ${lw}px,transparent ${lw}px) 0 0/calc(${r1(px)}px * var(--k)) 100%`);
+      bg.push(`linear-gradient(rgba(0,0,0,${a}) ${lw}px,transparent ${lw}px) 0 0/100% calc(${r1(py)}px * var(--k))`);
+    }
+    if (state.fxScan > 0) {
+      const p = state.fxScanGap;
+      bg.push(`repeating-linear-gradient(transparent 0 ${p / 2}px,rgba(0,0,0,${state.fxScan / 100}) ${p / 2}px ${p}px)`);
+    }
+    if (state.fxVig > 0) bg.push(`radial-gradient(circle farthest-corner,transparent 35%,rgba(0,0,0,${state.fxVig / 100}))`);
+    if (state.fxGrain > 0) {
+      const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='256' height='256'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix type='saturate' values='0'/></filter><rect width='256' height='256' filter='url(%23n)' opacity='${round2(state.fxGrain / 100)}'/></svg>`;
+      bg.push(`url("data:image/svg+xml,${svg.replace(/</g, '%3C').replace(/>/g, '%3E').replace(/"/g, "'")}")`);
+    }
+    if (!bg.length) return '';
+    return `\n.glyphotrame .gt-fx{position:absolute;inset:0;pointer-events:none;background:${bg.join(',')};}`;
+  }
+
+  function buildTXT(g) {
+    const rows = [];
+    for (let r = 0; r < g.rows; r++) rows.push(g.glyph.slice(r * g.cols, (r + 1) * g.cols).join('').replace(/\s+$/, ''));
+    return rows.join('\n');
+  }
+
+  /* ---------- Feuille Code ---------- */
+  const TABS = {
+    html: { build: buildHTML, ext: 'html', hint: "Colle ce bloc dans ta page. Il charge la police Google et place chaque caractère sur une grille exacte." },
+    svg:  { build: buildSVG,  ext: 'svg',  hint: "SVG vectoriel à coller directement dans le HTML ou à enregistrer en .svg. Le texte reste éditable." },
+    txt:  { build: buildTXT,  ext: 'txt',  hint: "Texte seul, sans couleurs ni dégradé. Affiche-le dans une police à chasse fixe (<pre>) pour garder l'alignement." }
+  };
+  let tab = 'html', codeCache = '';
+  function refreshCode() {
+    if (!grid) return;
+    const ht = grid.kind === 'halftone';
+    $('.tabs [data-tab="txt"]').hidden = ht;
+    if (ht && tab === 'txt') tab = 'html';
+    codeCache = TABS[tab].build(grid);
+    $('#code').value = codeCache;
+    const kb = new Blob([codeCache]).size / 1024;
+    const what = ht ? `${fmt(grid.count)} éléments halftone` : `${fmt(grid.cols)} × ${fmt(grid.rows)} caractères`;
+    $('#sheetSize').textContent = `${what} · ${kb < 1024 ? Math.round(kb) + ' Ko' : (kb / 1024).toFixed(1).replace('.', ',') + ' Mo'}`;
+    $('#tabHint').textContent = ht
+      ? (tab === 'html' ? "Bloc HTML avec un SVG responsive : il prend la largeur de son conteneur et reste net à toutes les tailles." : "SVG vectoriel à coller dans le HTML ou à ouvrir dans Illustrator ou Figma : chaque point est une forme modifiable.")
+      : TABS[tab].hint;
+    document.querySelectorAll('.tabs button').forEach(b => b.setAttribute('aria-selected', String(b.dataset.tab === tab)));
+  }
+  function openSheet() { if (!grid) return; $('#sheet').hidden = false; refreshCode(); $('#codeCopy').focus(); }
+  function closeSheet() { $('#sheet').hidden = true; $('#exCode').focus(); }
+
+  /* ---------- Liaison des réglages ---------- */
+  const FORMAT = {
+    width: v => `${fmt(v)} px`,
+    size: v => `${v} px`,
+    weight: v => `${v}`,
+    spacing: v => `${v > 0 ? '+' : ''}${String(v).replace('.', ',')} px`,
+    leading: v => `${v} %`,
+    bright: v => `${v > 0 ? '+' : ''}${v}`,
+    contrast: v => `${v > 0 ? '+' : ''}${v}`,
+    tol: v => `${v} %`,
+    soft: v => `${v}`,
+    gAngle: v => `${v}°`,
+    gPos: v => `${v} %`,
+    gSoft: v => `${v} %`,
+    gAmp: v => `${v} %`,
+    gFreq: v => String(v).replace('.', ','),
+    gPhase: v => `${v}°`,
+    htCell: v => `${v} px`,
+    htAngle: v => `${v}°`,
+    htMax: v => `${v} %`,
+    htMin: v => `${v} %`,
+    htJit: v => `${v} %`,
+    htAmp: v => `${v} %`,
+    htFreq: v => String(v).replace('.', ','),
+    neonMid: v => `${v} %`,
+    neonMix: v => `${v} %`,
+    neonSat: v => `${v} %`,
+    neonPop: v => `${v} %`,
+    fxGlow: v => `${v} %`,
+    fxGlowR: v => `${v} px`,
+    fxGrid: v => `${v} %`,
+    fxGridW: v => `${v} %`,
+    fxGridSize: v => `${v} px`,
+    fxScan: v => `${v} %`,
+    fxScanGap: v => `${v} px`,
+    fxChroma: v => `${String(v).replace('.', ',')} px`,
+    fxGrain: v => `${v} %`,
+    fxVig: v => `${v} %`
+  };
+  function setRange(key, v) {
+    state[key] = v; $('#' + key).value = v; $('#o-' + key).textContent = FORMAT[key](v);
+  }
+  document.querySelectorAll('input[type=range][data-key]').forEach((el) => {
+    const key = el.dataset.key;
+    const o = document.getElementById('o-' + key);
+    const sync = () => { state[key] = +el.value; o.textContent = FORMAT[key](state[key]); };
+    sync();
+    el.addEventListener('input', () => {
+      sync();
+      if (/^g[A-Z]/.test(key) || /^fx/.test(key)) { scheduleGrad(); return; }
+      if (key === 'tol' || key === 'soft') cutDirty = true;
+      schedule();
+    });
+  });
+
+  // Effet : caractères ou halftone
+  function setMode(m) {
+    const was = state.mode;
+    state.mode = m; pressGroup('mode', m);
+    $('#inkField').classList.toggle('off', m !== 'mono');
+    $('#htCmykHint').hidden = !(state.effect === 'halftone' && m === 'cmyk');
+    $('#neonFields').hidden = m !== 'neon';
+    // le néon a besoin d'un fond sombre pour ressortir
+    if (m === 'neon' && was !== 'neon' && lum(hexToRgb(state.paper)) > 0.5) {
+      setColors(state.ink, NEON_PRESETS[0].paper);
+      toast('Fond passé en noir pour faire ressortir le néon.');
+    }
+  }
+
+  // Palette néon
+  function syncNeonUI() {
+    ['A', 'B', 'C'].forEach(k => { $('#neon' + k).value = state['neon' + k]; $('#neon' + k + 'Hex').textContent = state['neon' + k]; });
+    const m = state.neonMid;
+    $('#neonBar').style.background = `linear-gradient(90deg,${state.neonA},${state.neonB} ${m}%,${state.neonC})`;
+    const btns = [...$('#neonPresets').children];
+    btns.forEach((b, i) => {
+      const p = NEON_PRESETS[i];
+      b.setAttribute('aria-pressed', String(p ? state.neonMix < 100 && p.a === state.neonA && p.b === state.neonB && p.c === state.neonC : state.neonMix === 100));
+    });
+    $('#neonImgFields').setAttribute('aria-disabled', String(state.neonMix === 0));
+  }
+  function applyNeonPreset(p) {
+    state.neonA = p.a; state.neonB = p.b; state.neonC = p.c;
+    if (state.neonMix === 100) setRange('neonMix', 0);
+    setColors(state.ink, p.paper); syncNeonUI(); schedule();
+  }
+  NEON_PRESETS.forEach(p => {
+    const b = document.createElement('button'); b.type = 'button';
+    const i = document.createElement('i'); i.style.background = `linear-gradient(90deg,${p.a},${p.b} 55%,${p.c})`;
+    b.append(i, document.createTextNode(p.name));
+    b.addEventListener('click', () => applyNeonPreset(p));
+    $('#neonPresets').appendChild(b);
+  });
+  // tuile « Couleurs de l'image » : les vraies couleurs, ravivées façon néon
+  {
+    const b = document.createElement('button'); b.type = 'button';
+    const i = document.createElement('i'); i.style.background = 'linear-gradient(90deg,#ff2d55,#ffcc00,#34e07a,#2fa8ff,#b04dff)';
+    b.append(i, document.createTextNode("Couleurs de l'image"));
+    b.addEventListener('click', () => {
+      setRange('neonMix', 100);
+      if (lum(hexToRgb(state.paper)) > 0.5) setColors(state.ink, '#050507');
+      syncNeonUI(); schedule();
+    });
+    $('#neonPresets').appendChild(b);
+  }
+  ['A', 'B', 'C'].forEach(k => $('#neon' + k).addEventListener('input', (e) => { state['neon' + k] = e.target.value; syncNeonUI(); schedule(); }));
+  $('#neonMid').addEventListener('input', syncNeonUI);
+  $('#neonMix').addEventListener('input', syncNeonUI);
+  syncNeonUI();
+
+  // Néon & écran
+  $('#fxGridSync').addEventListener('change', (e) => { state.fxGridSync = e.target.checked; $('#fxGridSizeField').hidden = state.fxGridSync; scheduleGrad(); });
+  const FX_KEYS = ['fxGlow', 'fxGrid', 'fxScan', 'fxChroma', 'fxGrain', 'fxVig'];
+  $('#fxReset').addEventListener('click', () => { FX_KEYS.forEach(k => setRange(k, 0)); scheduleGrad(); toast("Effets d'écran retirés."); });
+  $('#fxPreset').addEventListener('click', () => {
+    if (state.effect !== 'halftone') setEffect('halftone');
+    state.htType = 'points'; state.htShape = 'carre'; state.htGrid = 'carree';
+    setRange('htCell', 7); setRange('htAngle', 0); setRange('htMax', 100); setRange('htMin', 6); setRange('htJit', 0);
+    setRange('contrast', 40); setRange('bright', -15);
+    setMode('neon'); applyNeonPreset(NEON_PRESETS[0]); setRange('neonMid', 62); syncNeonUI();
+    setRange('fxGlow', 60); setRange('fxGlowR', 6); setRange('fxGrid', 55); setRange('fxGridW', 22);
+    state.fxGridSync = true; $('#fxGridSync').checked = true; $('#fxGridSizeField').hidden = true;
+    setRange('fxScan', 0); setRange('fxChroma', 1.5); setRange('fxGrain', 14); setRange('fxVig', 45);
+    syncHtUI(); schedule();
+    toast('Style « Néon numérique » appliqué.');
+  });
+  function setEffect(e) {
+    state.effect = e; pressGroup('effect', e);
+    document.querySelectorAll('[data-for]').forEach(el => { el.hidden = el.dataset.for !== e; });
+    if (e === 'chars' && state.mode === 'cmyk') setMode('mono');
+    setMode(state.mode);
+    schedule();
+  }
+  document.querySelectorAll('button[data-effect]').forEach(b => b.addEventListener('click', () => setEffect(b.dataset.effect)));
+
+  // Trame halftone
+  const HT_DEFAULTS = { points: { htCell: 12, htMax: 120 }, lignes: { htCell: 8, htMax: 100 }, pointillisme: { htCell: 5, htMax: 90 } };
+  function syncHtUI() {
+    const t = state.htType;
+    pressGroup('httype', t); pressGroup('htshape', state.htShape); pressGroup('htgrid', state.htGrid);
+    $('#htShapeField').hidden = t !== 'points';
+    $('#htGridField').hidden = t !== 'points';
+    $('#htAngleField').hidden = t === 'pointillisme';
+    $('#htMinField').hidden = t === 'pointillisme';
+    $('#htJitField').hidden = t !== 'points';
+    $('#htWaveFields').hidden = t !== 'lignes';
+    $('#htVarField').hidden = t !== 'pointillisme';
+    $('#htMaxLabel').textContent = t === 'pointillisme' ? 'Taille des points' : t === 'lignes' ? 'Épaisseur maximale' : 'Taille maximale';
+    $('label[for="htMin"]').textContent = t === 'lignes' ? 'Épaisseur minimale' : 'Taille minimale';
+    $('label[for="htCell"]').firstChild.textContent = t === 'pointillisme' ? 'Espacement des points' : t === 'lignes' ? 'Écart entre les lignes' : 'Taille de la trame';
+  }
+  document.querySelectorAll('button[data-httype]').forEach(b => b.addEventListener('click', () => {
+    state.htType = b.dataset.httype;
+    const d = HT_DEFAULTS[state.htType];
+    setRange('htCell', d.htCell); setRange('htMax', d.htMax);
+    syncHtUI(); schedule();
+  }));
+  document.querySelectorAll('button[data-htshape]').forEach(b => b.addEventListener('click', () => { state.htShape = b.dataset.htshape; syncHtUI(); schedule(); }));
+  document.querySelectorAll('button[data-htgrid]').forEach(b => b.addEventListener('click', () => { state.htGrid = b.dataset.htgrid; syncHtUI(); schedule(); }));
+  $('#htVar').addEventListener('change', (e) => { state.htVar = e.target.checked; schedule(); });
+  syncHtUI();
+
+  // Dégradé
+  function syncGradUI() {
+    const libre = state.gShape === 'libre';
+    document.querySelectorAll('[data-dir]').forEach(b => {
+      const on = state.gType === 'radial' ? b.dataset.dir === 'radial' : b.dataset.dir === String(state.gAngle);
+      b.setAttribute('aria-pressed', String(on));
+    });
+    pressGroup('gshape', state.gShape);
+    $('#dirField').hidden = libre;
+    $('#angleField').hidden = libre || state.gType === 'radial';
+    $('#posField').hidden = libre;
+    $('#waveFields').hidden = state.gShape !== 'vague';
+    $('#libreFields').hidden = !libre;
+    $('label[for="gFreq"]').textContent = state.gType === 'radial' ? 'Nombre de pétales' : "Nombre d'ondulations";
+    updateCurveUI();
+  }
+  $('#grad').addEventListener('change', (e) => {
+    state.grad = e.target.checked;
+    $('#gradbox').setAttribute('aria-disabled', String(!state.grad));
+    updateCurveUI(); scheduleGrad();
+  });
+  document.querySelectorAll('[data-dir]').forEach(b => b.addEventListener('click', () => {
+    if (b.dataset.dir === 'radial') state.gType = 'radial';
+    else {
+      state.gType = 'linear'; state.gAngle = +b.dataset.dir;
+      $('#gAngle').value = state.gAngle; $('#o-gAngle').textContent = FORMAT.gAngle(state.gAngle);
+    }
+    syncGradUI(); scheduleGrad();
+  }));
+  $('#gAngle').addEventListener('input', syncGradUI);
+  document.querySelectorAll('[data-gshape]').forEach(b => b.addEventListener('click', () => {
+    state.gShape = b.dataset.gshape; syncGradUI(); scheduleGrad();
+  }));
+  document.querySelectorAll('[data-gstyle]').forEach(b => b.addEventListener('click', () => {
+    state.gStyle = b.dataset.gstyle; pressGroup('gstyle', state.gStyle); scheduleGrad();
+  }));
+  $('#gInvert').addEventListener('change', (e) => { state.gInvert = e.target.checked; scheduleGrad(); });
+
+  /* Éditeur de la courbe de progression */
+  const ce = { x: (v) => 14 + v * 172, y: (v) => 100 - v * 90 };
+  function drawCurveEditor() {
+    const [x1, y1, x2, y2] = state.gCurve;
+    const P1 = [ce.x(x1), ce.y(y1)], P2 = [ce.x(x2), ce.y(y2)];
+    $('#ceCurve').setAttribute('d', `M14 10C${P1[0]} ${P1[1]} ${P2[0]} ${P2[1]} 186 100`);
+    const a1 = $('#ceArm1'), a2 = $('#ceArm2');
+    a1.setAttribute('x1', 14); a1.setAttribute('y1', 10); a1.setAttribute('x2', P1[0]); a1.setAttribute('y2', P1[1]);
+    a2.setAttribute('x1', 186); a2.setAttribute('y1', 100); a2.setAttribute('x2', P2[0]); a2.setAttribute('y2', P2[1]);
+    const h1 = $('#ceH1'), h2 = $('#ceH2');
+    h1.setAttribute('cx', P1[0]); h1.setAttribute('cy', P1[1]); h2.setAttribute('cx', P2[0]); h2.setAttribute('cy', P2[1]);
+    h1.setAttribute('aria-valuetext', `position ${Math.round(x1 * 100)} %, intensité ${Math.round(y1 * 100)} %`);
+    h2.setAttribute('aria-valuetext', `position ${Math.round(x2 * 100)} %, intensité ${Math.round(y2 * 100)} %`);
+    const key = state.gCurve.map(v => round3(v)).join(',');
+    document.querySelectorAll('[data-curve]').forEach(b => b.setAttribute('aria-pressed', String(CURVES[b.dataset.curve].join(',') === key)));
+  }
+  function setCurveHandle(idx, x, y) {
+    state.gCurve[idx * 2] = round3(clamp(x, 0, 1)); state.gCurve[idx * 2 + 1] = round3(clamp(y, 0, 1));
+    drawCurveEditor(); scheduleGrad();
+  }
+  const ceSvg = $('#curveEd');
+  let ceDrag = -1;
+  [$('#ceH1'), $('#ceH2')].forEach((h, idx) => {
+    h.addEventListener('pointerdown', (e) => { e.preventDefault(); ceDrag = idx; dragging = true; h.classList.add('drag'); ceSvg.setPointerCapture(e.pointerId); });
+    h.addEventListener('keydown', (e) => {
+      const st = e.shiftKey ? 0.1 : 0.02, x = state.gCurve[idx * 2], y = state.gCurve[idx * 2 + 1];
+      const moves = { ArrowLeft: [-st, 0], ArrowRight: [st, 0], ArrowUp: [0, st], ArrowDown: [0, -st] };
+      if (moves[e.key]) { e.preventDefault(); setCurveHandle(idx, x + moves[e.key][0], y + moves[e.key][1]); }
+    });
+  });
+  ceSvg.addEventListener('pointermove', (e) => {
+    if (ceDrag < 0) return;
+    const pt = new DOMPoint(e.clientX, e.clientY).matrixTransform(ceSvg.getScreenCTM().inverse());
+    setCurveHandle(ceDrag, (pt.x - 14) / 172, (100 - pt.y) / 90);
+  });
+  const ceEnd = () => { if (ceDrag < 0) return; document.querySelectorAll('.ce-handle').forEach(h => h.classList.remove('drag')); ceDrag = -1; dragging = false; scheduleGrad(); };
+  ceSvg.addEventListener('pointerup', ceEnd);
+  ceSvg.addEventListener('pointercancel', ceEnd);
+  document.querySelectorAll('[data-curve]').forEach(b => b.addEventListener('click', () => {
+    state.gCurve = CURVES[b.dataset.curve].slice(); drawCurveEditor(); scheduleGrad();
+  }));
+
+  /* ---------- Outil plume (façon Photoshop) ---------- */
+  const cwrap = $('#cwrap'), handlesBox = $('#curveHandles');
+  let penTool = 'pen', selNode = -1, penHover = null, penAction = null;
+  const hist = [], redoStack = [];
+  const snapPath = () => JSON.stringify(state.gPath);
+  const nodes = () => state.gPath.nodes;
+  function pushHist() { hist.push(snapPath()); if (hist.length > 100) hist.shift(); redoStack.length = 0; }
+  function undoPath() { if (!hist.length) return; redoStack.push(snapPath()); state.gPath = JSON.parse(hist.pop()); selNode = -1; penChanged(); }
+  function redoPath() { if (!redoStack.length) return; hist.push(snapPath()); state.gPath = JSON.parse(redoStack.pop()); selNode = -1; penChanged(); }
+  function penChanged() { updateCurveUI(); scheduleGrad(); }
+  const penVisible = () => state.grad && state.gShape === 'libre' && state.gShowCurve;
+  const penActive = () => penVisible() && $('#viewport').dataset.view !== 'wipe';
+
+  const PEN_HINTS = {
+    pen: () => state.gPath.closed
+      ? 'Tracé fermé. Clic sur le tracé : ajouter un point · clic sur un point : le supprimer.'
+      : nodes().length ? 'Clic : point d\'angle · Cliquer-glisser : point courbe · Clic sur le 1er point : fermer · Échap : terminer'
+        : 'Clique sur l\'image pour poser le premier point (cliquer-glisser pour une courbe).',
+    select: () => 'Glisse un point ou une poignée · Alt : casse la symétrie · Double-clic : angle ↔ courbe · Flèches : décaler',
+    add: () => 'Clique sur le tracé pour ajouter un point sans changer sa forme.',
+    del: () => 'Clique sur un point pour le supprimer.',
+    convert: () => 'Clic sur un point : le rend anguleux. Glisser depuis un point : tire de nouvelles poignées de courbe.'
+  };
+  function setPenTool(t) {
+    penTool = t; pressGroup('pen', t);
+    ['pen', 'select', 'add', 'del', 'convert'].forEach(k => cwrap.classList.toggle('tool-' + k, k === t));
+    if (t !== 'pen') penHover = null;
+    updateCurveUI();
+  }
+
+  // conversions coordonnées relatives ↔ pixels écran
+  const wrapRect = () => cwrap.getBoundingClientRect();
+  function relPos(e) { const r = wrapRect(); return [clamp((e.clientX - r.left) / r.width, 0, 1), clamp((e.clientY - r.top) / r.height, 0, 1)]; }
+  function constrain45(v) {
+    const r = wrapRect(), px = v[0] * r.width, py = v[1] * r.height, L = Math.hypot(px, py);
+    const a = Math.round(Math.atan2(py, px) / (Math.PI / 4)) * (Math.PI / 4);
+    return [L * Math.cos(a) / r.width, L * Math.sin(a) / r.height];
+  }
+  const pxLen = (v) => { const r = wrapRect(); return Math.hypot(v[0] * r.width, v[1] * r.height); };
+  const hasH = (h) => Math.abs(h[0]) + Math.abs(h[1]) > 1e-6;
+
+  // détection de ce qui est sous le pointeur (en pixels écran)
+  function hitAnchor(p, tol = 8) {
+    const r = wrapRect(); let best = -1, bd = tol;
+    nodes().forEach((n, i) => { const d = Math.hypot((n.x - p[0]) * r.width, (n.y - p[1]) * r.height); if (d <= bd) { bd = d; best = i; } });
+    return best;
+  }
+  function hitKnob(p, tol = 7) {
+    if (selNode < 0 || selNode >= nodes().length) return null;
+    const r = wrapRect(), n = nodes()[selNode];
+    for (const side of ['hout', 'hin']) {
+      if (!hasH(n[side])) continue;
+      if (Math.hypot((n.x + n[side][0] - p[0]) * r.width, (n.y + n[side][1] - p[1]) * r.height) <= tol) return { i: selNode, side };
+    }
+    return null;
+  }
+  function hitSegment(p, tol = 7) {
+    const r = wrapRect(); let best = null, bd = tol;
+    for (let s = 0; s < segCount(); s++) {
+      const P = segPts(s, 1, 1);
+      for (let k = 1; k < 60; k++) {
+        const t = k / 60, q = bez(P, t), d = Math.hypot((q[0] - p[0]) * r.width, (q[1] - p[1]) * r.height);
+        if (d < bd) { bd = d; best = { seg: s, t }; }
+      }
+    }
+    return best;
+  }
+  // ajoute un point sur un segment sans changer la forme (découpe de De Casteljau)
+  function insertAt(seg, t) {
+    const N = nodes(), a = N[seg], b = N[(seg + 1) % N.length], P = segPts(seg, 1, 1);
+    const L = (p, q) => [p[0] + (q[0] - p[0]) * t, p[1] + (q[1] - p[1]) * t];
+    const p01 = L(P[0], P[1]), p12 = L(P[1], P[2]), p23 = L(P[2], P[3]), p012 = L(p01, p12), p123 = L(p12, p23), m = L(p012, p123);
+    a.hout = [p01[0] - a.x, p01[1] - a.y]; b.hin = [p23[0] - b.x, p23[1] - b.y];
+    N.splice(seg + 1, 0, { x: m[0], y: m[1], hin: [p012[0] - m[0], p012[1] - m[1]], hout: [p123[0] - m[0], p123[1] - m[1]], smooth: true });
+    return seg + 1;
+  }
+  function deleteNode(i) {
+    nodes().splice(i, 1);
+    if (state.gPath.closed && nodes().length < 3) state.gPath.closed = false;
+    selNode = -1;
+  }
+  // point d'angle ↔ point courbe
+  function toggleSmooth(i) {
+    const N = nodes(), n = N[i];
+    if (hasH(n.hin) || hasH(n.hout)) { n.hin = [0, 0]; n.hout = [0, 0]; n.smooth = false; return; }
+    const prev = N[(i - 1 + N.length) % N.length], next = N[(i + 1) % N.length];
+    const a = (i === 0 && !state.gPath.closed) ? n : prev, b = (i === N.length - 1 && !state.gPath.closed) ? n : next;
+    const v = [(b.x - a.x) / 6, (b.y - a.y) / 6];
+    n.hout = v; n.hin = [-v[0], -v[1]]; n.smooth = true;
+  }
+
+  cwrap.addEventListener('pointerdown', (e) => {
+    if (!penActive() || picking || e.button !== 0) return;
+    e.preventDefault();
+    cwrap.setPointerCapture(e.pointerId);
+    const p = relPos(e), N = nodes(), closed = state.gPath.closed;
+    const knob = hitKnob(p), ai = hitAnchor(p);
+    penAction = null;
+    if (penTool === 'pen') {
+      if (knob) { pushHist(); penAction = { type: 'knob', ...knob }; }
+      else if (ai >= 0) {
+        pushHist();
+        if (!closed && ai === 0 && N.length >= 2) {
+          state.gPath.closed = true; selNode = 0; penAction = { type: 'pull', i: 0, from: p };
+          toast('Tracé fermé : l\'effet s\'applique à l\'intérieur.');
+        } else if (!closed && ai === N.length - 1) { N[ai].hout = [0, 0]; selNode = ai; penAction = { type: 'pull', i: ai, from: p, outOnly: true }; }
+        else deleteNode(ai);
+      } else {
+        const seg = hitSegment(p);
+        if (seg) { pushHist(); selNode = insertAt(seg.seg, seg.t); }
+        else if (closed) toast('Le tracé est fermé. « Nouveau tracé » pour en dessiner un autre, ou l\'outil Sélection pour le modifier.');
+        else {
+          pushHist();
+          let q = p;
+          if (e.shiftKey && N.length) { const l = N[N.length - 1], v = constrain45([p[0] - l.x, p[1] - l.y]); q = [clamp(l.x + v[0], 0, 1), clamp(l.y + v[1], 0, 1)]; }
+          N.push({ x: q[0], y: q[1], hin: [0, 0], hout: [0, 0], smooth: false });
+          selNode = N.length - 1; penAction = { type: 'pull', i: selNode, from: q };
+        }
+      }
+    } else if (penTool === 'select') {
+      if (knob) { pushHist(); penAction = { type: 'knob', ...knob }; }
+      else if (ai >= 0) { pushHist(); selNode = ai; penAction = { type: 'move', i: ai, from: p, x0: N[ai].x, y0: N[ai].y }; }
+      else selNode = -1;
+    } else if (penTool === 'add') {
+      const seg = hitSegment(p, 10);
+      if (seg) { pushHist(); selNode = insertAt(seg.seg, seg.t); }
+      else toast('Clique sur le tracé pour y ajouter un point.');
+    } else if (penTool === 'del') {
+      if (ai >= 0) { pushHist(); deleteNode(ai); }
+    } else if (penTool === 'convert') {
+      if (knob) { pushHist(); nodes()[knob.i].smooth = false; penAction = { type: 'knob', ...knob, free: true }; }
+      else if (ai >= 0) { pushHist(); selNode = ai; penAction = { type: 'convert', i: ai, from: p, moved: false }; }
+    }
+    dragging = !!penAction;
+    penChanged();
+  });
+  cwrap.addEventListener('pointermove', (e) => {
+    if (!penActive()) return;
+    const p = relPos(e);
+    if (!penAction) {
+      if (penTool === 'pen') {
+        penHover = p;
+        cwrap.classList.toggle('near-first', !state.gPath.closed && nodes().length >= 2 && hitAnchor(p) === 0);
+        updateCurveUI();
+      }
+      return;
+    }
+    const a = penAction, N = nodes();
+    if (!N[a.i]) return;
+    const n = N[a.i];
+    if (a.type === 'pull' || a.type === 'convert') {
+      let v = [p[0] - n.x, p[1] - n.y];
+      if (pxLen(v) < 3) return;
+      if (e.shiftKey) v = constrain45(v);
+      a.moved = true;
+      n.hout = v;
+      if (!a.outOnly) { n.hin = [-v[0], -v[1]]; n.smooth = true; }
+    } else if (a.type === 'move') {
+      let d = [p[0] - a.from[0], p[1] - a.from[1]];
+      if (e.shiftKey) d = Math.abs(d[0] * wrapRect().width) > Math.abs(d[1] * wrapRect().height) ? [d[0], 0] : [0, d[1]];
+      n.x = clamp(a.x0 + d[0], 0, 1); n.y = clamp(a.y0 + d[1], 0, 1);
+    } else if (a.type === 'knob') {
+      let v = [p[0] - n.x, p[1] - n.y];
+      if (e.shiftKey) v = constrain45(v);
+      n[a.side] = v;
+      const other = a.side === 'hout' ? 'hin' : 'hout';
+      if (e.altKey || a.free) n.smooth = false;
+      else if (n.smooth && hasH(n[other])) { const k = pxLen(n[other]) / (pxLen(v) || 1); n[other] = [-v[0] * k, -v[1] * k]; }
+    }
+    penChanged();
+  });
+  const penUp = () => {
+    if (!penAction) return;
+    const a = penAction; penAction = null; dragging = false;
+    if (a.type === 'convert' && !a.moved) {
+      const n = nodes()[a.i];
+      if (n && (hasH(n.hin) || hasH(n.hout))) { n.hin = [0, 0]; n.hout = [0, 0]; n.smooth = false; }
+    }
+    penChanged();
+  };
+  cwrap.addEventListener('pointerup', penUp);
+  cwrap.addEventListener('pointercancel', penUp);
+  cwrap.addEventListener('pointerleave', () => { if (penHover) { penHover = null; cwrap.classList.remove('near-first'); updateCurveUI(); } });
+  cwrap.addEventListener('dblclick', (e) => {
+    if (!penActive() || penTool !== 'select') return;
+    const ai = hitAnchor(relPos(e));
+    if (ai >= 0) { pushHist(); toggleSmooth(ai); selNode = ai; penChanged(); }
+  });
+
+  // raccourcis clavier façon Photoshop
+  document.addEventListener('keydown', (e) => {
+    if (!penActive()) return;
+    const tag = (e.target.tagName || '').toLowerCase();
+    if (['input', 'textarea', 'select'].includes(tag) || !$('#sheet').hidden) return;
+    const mod = e.ctrlKey || e.metaKey, k = e.key;
+    if (mod && (k === 'z' || k === 'Z')) { e.preventDefault(); e.shiftKey ? redoPath() : undoPath(); return; }
+    if (mod && (k === 'y' || k === 'Y')) { e.preventDefault(); redoPath(); return; }
+    if (mod || e.altKey) return;
+    if (k === 'p' || k === 'P') setPenTool('pen');
+    else if (k === 'a' || k === 'A') setPenTool('select');
+    else if (k === '+' || k === '=') setPenTool('add');
+    else if (k === '-' || k === '_') setPenTool('del');
+    else if ((k === 'c' || k === 'C') && e.shiftKey) setPenTool('convert');
+    else if ((k === 'Delete' || k === 'Backspace') && selNode >= 0) { e.preventDefault(); pushHist(); deleteNode(selNode); penChanged(); }
+    else if (k === 'Escape') { if (penTool === 'pen') setPenTool('select'); selNode = -1; updateCurveUI(); }
+    else if (k.startsWith('Arrow') && selNode >= 0) {
+      e.preventDefault();
+      const st = e.shiftKey ? 0.01 : 0.002, n = nodes()[selNode];
+      const mv = { ArrowLeft: [-st, 0], ArrowRight: [st, 0], ArrowUp: [0, -st], ArrowDown: [0, st] }[k];
+      pushHist(); n.x = clamp(n.x + mv[0], 0, 1); n.y = clamp(n.y + mv[1], 0, 1); penChanged();
+    }
+  });
+
+  // affichage du tracé, des points d'ancrage et des poignées
+  const knobIn = document.createElement('span'), knobOut = document.createElement('span');
+  knobIn.className = knobOut.className = 'pen-knob';
+  function updateCurveUI() {
+    const vis = penVisible();
+    $('#curveUI').toggleAttribute('hidden', !vis); handlesBox.hidden = !vis;
+    cwrap.classList.toggle('pen-on', vis);
+    $('#penBar').hidden = !(state.grad && state.gShape === 'libre');
+    $('#penUndo').disabled = !hist.length; $('#penRedo').disabled = !redoStack.length;
+    $('#penClose').textContent = state.gPath.closed ? 'Ouvrir le tracé' : 'Fermer le tracé';
+    $('#penHint').textContent = PEN_HINTS[penTool]();
+    if (!vis) return;
+    const N = nodes(), n = segCount(), f = round3;
+    let d = '';
+    if (N.length) {
+      d = `M${f(N[0].x)} ${f(N[0].y)}`;
+      for (let i = 0; i < n; i++) { const P = segPts(i, 1, 1); d += `C${f(P[1][0])} ${f(P[1][1])} ${f(P[2][0])} ${f(P[2][1])} ${f(P[3][0])} ${f(P[3][1])}`; }
+      if (state.gPath.closed && n) d += 'Z';
+    }
+    $('#cuUnder').setAttribute('d', d); $('#cuLine').setAttribute('d', d);
+    // tracé ouvert : prolongements en pointillés jusqu'aux bords (la frontière continue)
+    let ext = '';
+    if (!state.gPath.closed && N.length >= 2) {
+      const poly = pathPolygon(1, 1), m = poly.length - 3;
+      ext = `M${f(poly[0][0])} ${f(poly[0][1])}L${f(poly[1][0])} ${f(poly[1][1])}M${f(poly[m - 1][0])} ${f(poly[m - 1][1])}L${f(poly[m][0])} ${f(poly[m][1])}`;
+    }
+    $('#cuExt').setAttribute('d', ext);
+    // élastique : aperçu du prochain segment avec la plume
+    let rub = '';
+    if (penTool === 'pen' && penHover && !penAction && !state.gPath.closed && N.length && hitAnchor(penHover) < 0) {
+      const l = N[N.length - 1];
+      rub = `M${f(l.x)} ${f(l.y)}C${f(l.x + l.hout[0])} ${f(l.y + l.hout[1])} ${f(penHover[0])} ${f(penHover[1])} ${f(penHover[0])} ${f(penHover[1])}`;
+    }
+    $('#cuRubber').setAttribute('d', rub);
+    // points d'ancrage
+    const anchors = [...handlesBox.querySelectorAll('.pen-anchor')];
+    while (anchors.length > N.length) anchors.pop().remove();
+    while (anchors.length < N.length) { const s = document.createElement('span'); s.className = 'pen-anchor'; handlesBox.appendChild(s); anchors.push(s); }
+    anchors.forEach((s, i) => {
+      s.style.left = N[i].x * 100 + '%'; s.style.top = N[i].y * 100 + '%';
+      s.classList.toggle('sel', i === selNode);
+      s.classList.toggle('smooth', N[i].smooth && (hasH(N[i].hin) || hasH(N[i].hout)));
+      s.classList.toggle('first', i === 0 && !state.gPath.closed && N.length >= 2);
+    });
+    // poignées du point sélectionné
+    let arms = '';
+    [[knobIn, 'hin'], [knobOut, 'hout']].forEach(([k, side]) => {
+      const sn = N[selNode];
+      if (sn && hasH(sn[side])) {
+        const x = sn.x + sn[side][0], y = sn.y + sn[side][1];
+        k.style.left = x * 100 + '%'; k.style.top = y * 100 + '%';
+        if (!k.parentNode) handlesBox.appendChild(k);
+        arms += `M${f(sn.x)} ${f(sn.y)}L${f(x)} ${f(y)}`;
+      } else if (k.parentNode) k.remove();
+    });
+    $('#cuArms').setAttribute('d', arms);
+  }
+
+  document.querySelectorAll('button[data-pen]').forEach(b => b.addEventListener('click', () => setPenTool(b.dataset.pen)));
+  $('#penUndo').addEventListener('click', undoPath);
+  $('#penRedo').addEventListener('click', redoPath);
+  $('#penNew').addEventListener('click', () => {
+    pushHist(); state.gPath = { closed: false, nodes: [] }; selNode = -1; setPenTool('pen'); penChanged();
+    toast('Clique sur l\'image pour poser les points. Clique sur le premier point pour fermer le tracé.');
+  });
+  $('#penClose').addEventListener('click', () => {
+    if (!state.gPath.closed && nodes().length < 2) { toast('Pose au moins 2 points avant de fermer le tracé.'); return; }
+    pushHist(); state.gPath.closed = !state.gPath.closed; penChanged();
+  });
+  $('#ptReset').addEventListener('click', () => { pushHist(); state.gPath = JSON.parse(DEFAULT_PATH); selNode = -1; penChanged(); });
+  $('#gShowCurve').addEventListener('change', (e) => { state.gShowCurve = e.target.checked; updateCurveUI(); });
+  setPenTool('pen');
+
+  drawCurveEditor();
+  syncGradUI();
+
+  // Détourage
+  function setPicking(on) {
+    picking = on;
+    $('#cutPick').setAttribute('aria-pressed', String(on));
+    out.classList.toggle('picking', on);
+    if (on) toast("Clique sur le fond dans l'aperçu pour choisir sa couleur.");
+  }
+  $('#cut').addEventListener('change', (e) => {
+    state.cut = e.target.checked;
+    $('#cutbox').setAttribute('aria-disabled', String(!state.cut));
+    if (!state.cut) setPicking(false);
+    if (state.cut && !state.transparent) {
+      state.transparent = true; $('#transparent').checked = true;
+      toast("Fond transparent activé pour les exports PNG, SVG et code.");
+    }
+    cutDirty = true; schedule();
+  });
+  $('#flood').addEventListener('change', (e) => { state.flood = e.target.checked; cutDirty = true; schedule(); });
+  $('#cutColor').addEventListener('input', (e) => { state.cutAuto = false; state.cutColor = e.target.value; syncCutColorUI(); cutDirty = true; schedule(); });
+  $('#cutAuto').addEventListener('click', () => { state.cutAuto = true; setPicking(false); cutDirty = true; schedule(); });
+  $('#cutPick').addEventListener('click', () => setPicking(!picking));
+  // Vues : résultat, côte à côte, curseur
+  const compare = $('#compare'), wipe = $('#wipe');
+  document.querySelectorAll('[data-view]').forEach(b => {
+    if (b.tagName !== 'BUTTON') return;
+    b.addEventListener('click', () => {
+      pressGroup('view', b.dataset.view);
+      $('#viewport').dataset.view = b.dataset.view;
+    });
+  });
+  const setWipe = (pct) => { pct = clamp(pct, 0, 100); compare.style.setProperty('--x', pct + '%'); wipe.value = Math.round(pct); };
+  wipe.addEventListener('input', () => setWipe(+wipe.value));
+  let wiping = false;
+  const wipeFromEvent = (e) => { const r = compare.getBoundingClientRect(); setWipe((e.clientX - r.left) / r.width * 100); };
+  compare.addEventListener('pointerdown', (e) => {
+    if ($('#viewport').dataset.view !== 'wipe' || picking) return;
+    wiping = true; compare.setPointerCapture(e.pointerId); wipeFromEvent(e);
+  });
+  compare.addEventListener('pointermove', (e) => { if (wiping) wipeFromEvent(e); });
+  const stopWipe = () => { wiping = false; };
+  compare.addEventListener('pointerup', stopWipe);
+  compare.addEventListener('pointercancel', stopWipe);
+
+  orig.addEventListener('click', pickAt);
+  out.addEventListener('click', pickAt);
+  function pickAt(e) {
+    if (!picking || !rawSource) return;
+    const r = e.currentTarget.getBoundingClientRect();
+    const fx = clamp((e.clientX - r.left) / r.width, 0, 0.9999), fy = clamp((e.clientY - r.top) / r.height, 0, 0.9999);
+    const { data, width: w, height: h } = getRawData();
+    const i = ((Math.floor(fy * h) * w) + Math.floor(fx * w)) * 4;
+    state.cutAuto = false; state.cutColor = toHex(data[i], data[i + 1], data[i + 2]);
+    syncCutColorUI(); setPicking(false); cutDirty = true; schedule();
+    toast('Couleur du fond : ' + state.cutColor);
+  }
+
+  function pressGroup(attr, value) {
+    document.querySelectorAll(`button[data-${attr}]`).forEach(b => b.setAttribute('aria-pressed', String(b.dataset[attr] === value)));
+  }
+  document.querySelectorAll('[data-font]').forEach(b => b.addEventListener('click', () => { state.font = b.dataset.font; pressGroup('font', state.font); fontRetries = 0; schedule(); }));
+  document.querySelectorAll('button[data-mode]').forEach(b => b.addEventListener('click', () => { setMode(b.dataset.mode); schedule(); }));
+  document.querySelectorAll('[data-zoom]').forEach(b => b.addEventListener('click', () => {
+    state.zoom = b.dataset.zoom; pressGroup('zoom', state.zoom);
+    const vp = $('#viewport'); vp.classList.toggle('fit', state.zoom === 'fit'); vp.classList.toggle('actual', state.zoom === 'actual');
+  }));
+
+  const presetSel = $('#preset'), charsIn = $('#chars');
+  PRESETS.forEach(p => { const o = document.createElement('option'); o.value = p.id; o.textContent = p.name; presetSel.appendChild(o); });
+  presetSel.value = state.preset; charsIn.value = state.custom;
+  presetSel.addEventListener('change', () => {
+    state.preset = presetSel.value;
+    const p = PRESETS.find(x => x.id === state.preset);
+    if (p.chars) { state.custom = p.chars; charsIn.value = p.chars; }
+    else charsIn.focus();
+    schedule();
+  });
+  charsIn.addEventListener('input', () => {
+    state.custom = charsIn.value;
+    const match = PRESETS.find(p => p.chars && p.chars === charsIn.value);
+    state.preset = match ? match.id : 'perso'; presetSel.value = state.preset;
+    schedule();
+  });
+  $('#sort').addEventListener('change', e => { state.sort = e.target.checked; schedule(); });
+  $('#invert').addEventListener('change', e => { state.invert = e.target.checked; schedule(); });
+  $('#transparent').addEventListener('change', e => { state.transparent = e.target.checked; schedule(); });
+  $('#scale').addEventListener('change', e => { state.scale = +e.target.value; updateStats(); });
+
+  function setColors(ink, paper) {
+    state.ink = ink; state.paper = paper;
+    $('#ink').value = ink; $('#paperC').value = paper;
+    $('#inkHex').textContent = ink; $('#paperHex').textContent = paper;
+    schedule();
+  }
+  $('#ink').addEventListener('input', e => setColors(e.target.value, state.paper));
+  $('#paperC').addEventListener('input', e => setColors(state.ink, e.target.value));
+  const sw = $('#swatches');
+  SWATCHES.forEach(s => {
+    const b = document.createElement('button'); b.type = 'button'; b.className = 'swatch';
+    const i = document.createElement('i'); i.style.background = s.paper; i.style.color = s.ink; i.textContent = '#';
+    b.append(i, document.createTextNode(s.name));
+    b.addEventListener('click', () => setColors(s.ink, s.paper));
+    sw.appendChild(b);
+  });
+
+  $('#file').addEventListener('change', e => { loadFile(e.target.files[0]); e.target.value = ''; });
+  $('#sampleBtn').addEventListener('click', () => setSource(makeSample(), 'exemple-sphere.png'));
+
+  // Glisser-déposer
+  const vp = $('#viewport'), dz = $('#dropzone'), veil = $('#dropveil');
+  let dragDepth = 0;
+  window.addEventListener('dragenter', e => { if (e.dataTransfer && [...e.dataTransfer.types].includes('Files')) { dragDepth++; veil.hidden = false; dz.classList.add('over'); } });
+  window.addEventListener('dragleave', () => { dragDepth = Math.max(0, dragDepth - 1); if (!dragDepth) { veil.hidden = true; dz.classList.remove('over'); } });
+  window.addEventListener('dragover', e => e.preventDefault());
+  window.addEventListener('drop', e => {
+    e.preventDefault(); dragDepth = 0; veil.hidden = true; dz.classList.remove('over');
+    const f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+    if (f) loadFile(f);
+  });
+  // Coller
+  window.addEventListener('paste', e => {
+    if (e.target === charsIn) return;
+    const items = e.clipboardData ? [...e.clipboardData.items] : [];
+    const it = items.find(x => x.kind === 'file' && /^image\//.test(x.type));
+    if (it) { e.preventDefault(); const f = it.getAsFile(); loadFile(new File([f], f.name || 'image-collee.png', { type: f.type })); }
+  });
+
+  // Exports
+  $('#exPng').addEventListener('click', () => exportRaster('png'));
+  $('#exJpg').addEventListener('click', () => exportRaster('jpeg'));
+  $('#exSvg').addEventListener('click', () => { if (grid) saveFile(`${sourceName}-glyphotrame.svg`, buildSVG(grid)); });
+  $('#exCode').addEventListener('click', openSheet);
+  $('#sheetClose').addEventListener('click', closeSheet);
+  $('#sheet').addEventListener('click', e => { if (e.target.id === 'sheet') closeSheet(); });
+  window.addEventListener('keydown', e => { if (e.key === 'Escape' && !$('#sheet').hidden) closeSheet(); });
+  document.querySelectorAll('.tabs button').forEach(b => b.addEventListener('click', () => { tab = b.dataset.tab; refreshCode(); }));
+  $('#codeCopy').addEventListener('click', () => {
+    const ta = $('#code');
+    const fallback = () => { ta.focus(); ta.select(); toast('Code sélectionné : copie-le avec Ctrl+C (ou Cmd+C).'); };
+    try {
+      navigator.clipboard.writeText(codeCache).then(() => toast('Code copié dans le presse-papiers.'), fallback);
+    } catch (e) { fallback(); }
+  });
+  $('#codeDl').addEventListener('click', () => {
+    let data = codeCache;
+    if (tab === 'html') data = `<!doctype html>\n<html lang="fr">\n<head>\n<meta charset="utf-8">\n<meta name="viewport" content="width=device-width,initial-scale=1">\n<title>${sourceName} · Glyphotrame</title>\n</head>\n<body style="margin:0;padding:24px;overflow:auto">\n${codeCache}\n</body>\n</html>\n`;
+    saveFile(`${sourceName}-glyphotrame.${TABS[tab].ext}`, data);
+  });
+
+  // Démarrage
+  getDownloads();
+  rawSource = source = makeSample(); sourceId++;
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { densCache.clear(); schedule(); });
+  schedule();
+})();
+</script>
+
+</body>
+</html>

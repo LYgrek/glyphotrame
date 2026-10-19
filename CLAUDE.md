@@ -1,0 +1,74 @@
+# Glyphotrame — application de bureau
+
+Ce fichier est lu automatiquement par Claude Code au début de chaque session. Il décrit le projet, la cible technique et les règles de travail.
+
+## Le projet
+
+Glyphotrame transforme des images en trames graphiques : **caractères du clavier** (façon ASCII art typographique) ou **halftone** (points, lignes, pointillisme, CMJN), avec dégradés, détourage, effets néon/écran et exports PNG, JPEG, SVG et HTML.
+
+Il existe déjà une version complète et fonctionnelle en **un seul fichier HTML** :
+`reference/glyphotrame-reference.html` (à ouvrir dans un navigateur pour comparer).
+
+**C'est la référence.** Le but est de la porter en application de bureau, à fonctionnalités identiques, puis de l'améliorer. La liste complète des fonctions à conserver est dans `docs/fonctionnalites.md`.
+
+- Auteur : Enzo, designer graphique et web (Windows). Interface en **français**.
+- Ne jamais modifier `reference/` : c'est l'étalon de comparaison.
+
+## Stack
+
+- **Tauri 2** (Rust) pour la fenêtre, l'accès aux fichiers et l'installateur.
+- **React + Vite** (JavaScript, pas TypeScript) pour l'interface.
+- **WebGL2** pour l'aperçu calculé sur la carte graphique (phase 2). Pas de WebGPU : il n'est pas encore fiable dans les WebView de Tauri sur macOS et Linux.
+- Plugins Tauri : `dialog` (ouvrir / enregistrer) et `fs` (écrire les fichiers exportés).
+
+Commandes :
+- `npm install` : installer les dépendances
+- `npm run tauri dev` : lancer l'application en mode développement
+- `npm run tauri build` : créer l'installateur (`src-tauri/target/release/bundle/`)
+
+## Architecture cible
+
+```
+src/
+  main.jsx, App.jsx
+  state/        état global (un seul store, même forme que l'objet `state` de la référence)
+  engine/       moteur pur JavaScript, sans React, porté depuis la référence
+    tones.js        luminosité, contraste, inversion, carte des tons
+    chars.js        grille de caractères, densité des glyphes
+    halftone.js     points / lignes / pointillisme / CMJN, formes
+    cutout.js       détourage (couleur, tolérance, remplissage depuis les bords)
+    gradient.js     dégradés (droit, vague, radial), courbe de progression
+    penpath.js      tracé plume (Bézier, ouvert / fermé) et masque
+    neon.js         palette néon, couleurs de l'image ravivées
+    postfx.js       lueur, grille d'écran, balayage, aberration, grain, vignettage
+    export-svg.js   export SVG vectoriel (masques, filtres, motifs)
+    export-html.js  export HTML + CSS, texte brut
+  gpu/          rendu WebGL2 de l'aperçu (phase 2)
+  ui/           composants : panneau, sections, curseurs, sélecteurs, éditeur de courbe,
+                barre d'outils plume, zone d'aperçu (résultat / côte à côte / curseur), fenêtre Code
+src-tauri/      côté Rust : plugins dialog + fs, configuration de la fenêtre
+reference/      version HTML d'origine (ne pas modifier)
+docs/           fonctionnalités, notes
+```
+
+Principes :
+- Le **moteur** (`engine/`) reste indépendant de React : fonctions pures qui prennent l'état et une image, et rendent des données (grille, points, masques). L'interface ne fait qu'appeler le moteur.
+- Les **exports SVG et HTML restent calculés par le moteur JavaScript** (vectoriels, identiques à la référence). Le GPU sert à l'aperçu et aux exports PNG/JPEG.
+- Reprendre l'identité visuelle de la référence : tokens de couleur (`--paper`, `--panel`, `--accent`…), thèmes clair et sombre, polices Archivo, Fraunces et IBM Plex Mono. Dans l'application, embarquer les polices localement (paquets `@fontsource/*`) car l'app doit marcher hors ligne. Les exports SVG/HTML, eux, continuent de pointer vers Google Fonts.
+
+## Phases
+
+1. **Portage à l'identique** (moteur canvas 2D existant) : même interface, mêmes réglages, mêmes résultats que la référence. Ouvrir et enregistrer via les boîtes de dialogue natives (plugins dialog + fs), à la place des téléchargements du navigateur. Supprimer la limite de 1800 px sur l'image source (la rendre réglable).
+2. **Aperçu sur la carte graphique (WebGL2)** : shaders pour le halftone (points, lignes, CMJN), atlas de glyphes pour les caractères, composition (dégradé, détourage, lueur, effets d'écran) en shaders. Le rendu canvas 2D reste en secours si WebGL2 n'est pas disponible. Exports PNG haute définition rendus par le GPU.
+3. **Confort** : calculs lourds dans des Web Workers, sauvegarde / ouverture de projets (.json avec réglages + chemin de l'image), préréglages personnels, annuler / rétablir global.
+4. **Vidéo** (plus tard) : import et export via ffmpeg (sidecar Tauri), timeline, images clés sur les réglages, export ProRes 4444 / WebM avec transparence et séquence PNG pour After Effects.
+5. **Distribution** : icône et nom définitifs, GitHub Actions (`tauri-action`) pour construire Windows et macOS (version universelle).
+
+## Règles de travail
+
+- Avancer par **petites étapes vérifiables**. Après chaque étape : lancer `npm run tauri dev`, vérifier, et comparer avec `reference/glyphotrame-reference.html`.
+- Cocher l'avancement dans `docs/fonctionnalites.md`.
+- Faire un commit git à chaque étape qui fonctionne, avec un message en français.
+- Textes de l'interface, messages d'erreur et commentaires en français.
+- Ne pas ajouter de dépendance lourde sans raison (pas de framework UI) : la référence est en CSS pur, garder cette approche (CSS modules ou un fichier CSS par composant).
+- Windows est la plateforme de développement principale (chemins, scripts PowerShell).
