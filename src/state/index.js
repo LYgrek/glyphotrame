@@ -21,6 +21,9 @@ export const session = createStore({
   canUndo: false, canRedo: false,
   // projet ouvert ou enregistré (chemin du fichier .json), modifications non enregistrées
   projectPath: null, projectName: null, dirty: false,
+  // vidéo ouverte ({ meta } ou null), instant courant (s), lecture, points d'entrée / sortie (s), boucle,
+  // images par seconde réellement affichées pendant la lecture
+  video: null, vTime: 0, vPlaying: false, vIn: 0, vOut: 0, vLoop: false, vFps: 0,
   // rendu de l'aperçu et des exports PNG / JPEG : carte graphique (WebGL2) ou canvas 2D
   // (?rendu=canvas dans l'adresse force le canvas 2D, utilisé par le banc compare:ui)
   rendu: typeof location !== 'undefined' && new URLSearchParams(location.search).get('rendu') === 'canvas' ? 'canvas' : 'gpu',

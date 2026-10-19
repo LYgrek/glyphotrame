@@ -66,7 +66,17 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_shell::init())
-        .invoke_handler(tauri::generate_handler![lire_image, version_ffmpeg, video::infos_video, video::image_video])
+        .manage(video::CacheInfos::default())
+        .manage(video::Lectures::default())
+        .invoke_handler(tauri::generate_handler![
+            lire_image,
+            version_ffmpeg,
+            video::infos_video,
+            video::image_video,
+            video::lecture_debut,
+            video::lecture_image,
+            video::lecture_fin
+        ])
         .run(tauri::generate_context!())
         .expect("erreur au lancement de l'application Tauri");
 }

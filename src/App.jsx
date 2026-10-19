@@ -3,6 +3,7 @@ import { session, toast } from './state/index.js';
 import { start } from './state/renderer.js';
 import { loadImage, loadMedia } from './state/actions.js';
 import { openProject, saveProject } from './state/project.js';
+import { onVideoKey } from './state/video.js';
 import { onFileDrop } from './platform/files.js';
 import { ffmpegVersion } from './platform/ffmpeg.js';
 import Header from './ui/Header.jsx';
@@ -33,13 +34,15 @@ export default function App() {
       else if (k === 'o' && !e.shiftKey) { e.preventDefault(); openProject(); }
     };
     window.addEventListener('keydown', onKey);
+    // vidéo : Espace, ← →, I, O, L (voir state/video.js)
+    window.addEventListener('keydown', onVideoKey);
     // glisser-déposer un fichier sur la fenêtre
     const stopDrop = onFileDrop({
       enter: () => session.set({ dragOver: true }),
       leave: () => session.set({ dragOver: false }),
       drop: (file, error) => { if (error) toast('Impossible de lire ce fichier.'); else loadMedia(file); }
     });
-    return () => { window.removeEventListener('paste', onPaste); window.removeEventListener('keydown', onKey); stopDrop(); };
+    return () => { window.removeEventListener('paste', onPaste); window.removeEventListener('keydown', onKey); window.removeEventListener('keydown', onVideoKey); stopDrop(); };
   }, []);
 
   return (

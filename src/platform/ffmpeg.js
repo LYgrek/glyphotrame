@@ -20,6 +20,29 @@ export async function videoInfo(path) {
   return invoke('infos_video', { chemin: path });
 }
 
+// pixels RGBA reçus (après un en-tête de `skip` octets) → canvas
+function toCanvas(buf, w, h, skip) {
+  const c = createCanvas(w, h);
+  c.getContext('2d').putImageData(new ImageData(new Uint8ClampedArray(buf, skip, w * h * 4), w, h), 0, 0);
+  return c;
+}
+
+/* ---------- Lecture continue (aperçu) ---------- */
+// démarre une lecture à l'instant `time`, images de plus grand côté ≤ maxDim → numéro de session
+export async function playStart(path, time, maxDim) {
+  if (!inTauri() || !path) throw notInApp();
+  return invoke('lecture_debut', { chemin: path, temps: time, tailleMax: Math.round(maxDim) });
+}
+// prochaine image de numéro ≥ target (les images en retard sont sautées côté Rust)
+// → { canvas, index } (index depuis le début de la session) ou null à la fin de la vidéo
+export async function playFrame(id, target) {
+  const buf = await invoke('lecture_image', { id, cible: Math.max(0, Math.floor(target)) });
+  if (!buf.byteLength) return null;
+  const head = new DataView(buf, 0, 12), w = head.getUint32(0, true), h = head.getUint32(4, true);
+  return { canvas: toCanvas(buf, w, h, 12), index: head.getUint32(8, true) };
+}
+export const playStop = (id) => invoke('lecture_fin', { id });
+
 // image de la vidéo à l'instant `time` (s), plus grand côté ≤ maxDim → canvas
 export async function videoFrame(path, time, maxDim) {
   if (!inTauri() || !path) throw notInApp();

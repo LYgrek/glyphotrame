@@ -111,7 +111,7 @@ Vérifié par `npm run compare:gpu` (46 réglages types, GPU ↔ canvas 2D) et `
 
 - [x] Étape 0 · ffmpeg et ffprobe embarqués (sidecars), téléchargés par `tools/get-ffmpeg.ps1` (somme SHA-256 vérifiée) ; lancés uniquement depuis le Rust (commande `version_ffmpeg`, version affichée dans la console au démarrage) — *vérifié dans la fenêtre Tauri : versions renvoyées en 67 ms, exécution d'un programme depuis l'interface refusée*
 - [x] Étape 1 · Importer une vidéo : boîte Ouvrir (filtre images et vidéos) et glisser-déposer (mp4, mov, m4v, webm, mkv, avi), infos par ffprobe (dimensions affichées, durée, cadence, images, rotation, son, codec), première image avec l'effet, informations dans les statistiques, taille max appliquée, message clair si illisible — *vérifié par `cargo test` (mires générées par ffmpeg, dont une en portrait) et dans la fenêtre Tauri*
-- [ ] Étape 2 · Naviguer et lire la vidéo dans l'aperçu
+- [x] Étape 2 · Barre de lecture sous l'aperçu (vidéo seulement) : lecture / pause, image précédente / suivante (Maj : 10 images), curseur de temps (la dernière position demandée gagne), temps courant / durée et numéro d'image, points d'entrée et de sortie (plage soulignée, retour à toute la vidéo), lecture en boucle, images par seconde réellement affichées ; raccourcis Espace, ← →, I, O, L (sans conflit avec la plume ni les champs de saisie) — *vérifié par `cargo test` (image n en lecture continue = image n à l'arrêt) et dans la fenêtre Tauri (navigation à l'image près, lecture à l'horloge avec sauts d'images, boucle entre entrée et sortie, arrêt à la sortie, raccourcis, retour à une image)*
 - [ ] Étape 3 · Rendre une image de vidéo
 - [ ] Étape 4 · Exporter la vidéo
 - [ ] Étape 5 · Projets

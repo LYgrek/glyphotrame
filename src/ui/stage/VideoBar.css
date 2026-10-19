@@ -1,0 +1,21 @@
+/* Barre de lecture vidéo (même style que la barre d'outils plume) */
+.videobar{display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px;padding:8px 14px;border-top:1px solid var(--line);background:var(--paper)}
+.vbuttons{display:flex;gap:3px;padding:3px;background:var(--well);border-radius:8px}
+.vbuttons button{display:flex;align-items:center;gap:6px;border:0;background:transparent;border-radius:5px;padding:6px 9px;cursor:pointer;color:var(--muted);font-size:12px;font-weight:500}
+.vbuttons button svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.4;stroke-linejoin:round;stroke-linecap:round}
+.vbuttons button:hover{color:var(--ink)}
+.vbuttons button[aria-pressed="true"]{background:var(--panel);color:var(--ink);box-shadow:0 1px 2px var(--shadow)}
+.vbuttons .vplay{color:var(--ink)}
+.vbuttons .vplay svg{fill:currentColor}
+.vbuttons .vplay[aria-pressed="true"]{background:transparent;box-shadow:none}
+.vtime{font:12px/1.4 var(--f-mono);color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap}
+.vtime b{color:var(--ink);font-weight:500}
+/* curseur de temps, avec la plage entrée → sortie soulignée dessous */
+.vtrack{position:relative;flex:1;min-width:160px;padding-bottom:5px}
+.vrange{position:absolute;left:var(--in);right:calc(100% - var(--out));bottom:0;height:3px;border-radius:2px;background:var(--line)}
+.vrange.on{background:var(--accent)}
+.vinfo{display:flex;align-items:center;gap:10px;font:12px/1.4 var(--f-mono);color:var(--muted);font-variant-numeric:tabular-nums}
+.vinfo:empty{display:none}
+.vreset{border:0;background:transparent;padding:0;font:inherit;color:inherit;cursor:pointer}
+.vreset:hover{color:var(--ink)}
+@media (max-width:700px){.vbuttons button span{display:none}}

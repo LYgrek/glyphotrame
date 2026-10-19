@@ -42,7 +42,7 @@ src/
     pen.js          outil plume : outil actif, historique, boutons
     project.js      projets : enregistrer, ouvrir, suivi des modifications
     project-format.js  format des fichiers de projet (.json), fonctions pures
-    video.js        vidéo : ouvrir, image courante (source { kind: 'video', path, meta, time })
+    video.js        vidéo : ouvrir, image courante (source { kind: 'video', path, meta, time }), navigation, lecture, entrée / sortie, raccourcis
   platform/     Tauri : boîtes de dialogue, lecture / écriture de fichiers, glisser-déposer ; paths.js : chemins relatifs ;
                 ffmpeg.js : appels aux commandes Rust de la vidéo
   engine/       moteur pur JavaScript, sans React, porté depuis la référence
@@ -71,10 +71,10 @@ src/
   ui/           composants (un fichier CSS par composant, classes identiques à la référence)
     controls/       curseur, boutons segmentés, cases, interrupteur, couleur
     panel/          colonne de réglages, une section par bloc, éditeur de courbe
-    stage/          aperçu (vues, curseur avant-après), barre et gestes de la plume
+    stage/          aperçu (vues, curseur avant-après), barre et gestes de la plume, barre de lecture vidéo
     Header, CodeSheet, Toast
 src-tauri/      côté Rust : plugins dialog + fs + shell, commandes (lire_image, ffmpeg), configuration de la fenêtre
-  src/video.rs    vidéo : infos (ffprobe), image à un instant (ffmpeg, RGBA brut) ; tests sur de vraies vidéos
+  src/video.rs    vidéo : infos (ffprobe), image à un instant, sessions de lecture continue (ffmpeg, RGBA brut) ; tests sur de vraies vidéos
   binaries/       ffmpeg / ffprobe (téléchargés par tools/get-ffmpeg.ps1, non versionnés)
 reference/      version HTML d'origine (ne pas modifier)
 tools/          bancs de comparaison (`npm run compare`, `compare:ui`, `compare:gpu`), hors application

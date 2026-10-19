@@ -67,6 +67,10 @@ export function scheduleGrad() {
 export function setDragging(on) { dragging = on; }
 export function endDrag() { if (!dragging) return; dragging = false; scheduleGrad(); }
 
+// promesse résolue à la fin du prochain rendu complet (lecture vidéo : une image à la fois)
+let renderWaiters = [];
+export const whenRendered = () => new Promise((resolve) => renderWaiters.push(resolve));
+
 async function render() {
   if (!src) return;
   // taille max changée : une seule nouvelle réduction par image affichée, même si le curseur bouge vite
@@ -90,6 +94,7 @@ async function render() {
   const video = src.kind === 'video' ? { ...src.meta, time: src.time } : null;
   session.set({ stats: { kind: grid.kind, cols: grid.cols, rows: grid.rows, count: grid.count, W: grid.W, H: grid.H, type: grid.type, cmyk: grid.cmyk, htCell: st.htCell, video } });
   if (!res.ready && fontRetries < 4) { fontRetries++; setTimeout(schedule, 500); }
+  const w = renderWaiters; renderWaiters = []; w.forEach((f) => f());
 }
 
 // réglages sans effet sur l'image
@@ -121,7 +126,8 @@ export function setSource(canvas, name, original = null, extra = {}) {
   src = E.createSource(canvas, name, original, extra);
   cutDirty = true;
   if (!settings.get().cutAuto) { silent = true; settings.set({ cutAuto: true }); silent = false; }
-  session.set({ sourceName: name });
+  // barre de lecture : affichée pour une vidéo seulement
+  session.set({ sourceName: name, video: extra.kind === 'video' ? { meta: extra.meta } : null });
   schedule();
 }
 

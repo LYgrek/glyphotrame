@@ -7,6 +7,7 @@ import { canvasRef } from '../../state/renderer.js';
 import Seg from '../controls/Seg.jsx';
 import PenToolbar from './PenToolbar.jsx';
 import PenLayer from './PenLayer.jsx';
+import VideoBar from './VideoBar.jsx';
 import './Stage.css';
 
 // Statistiques. Chaque texte est une seule chaîne, comme dans la référence : un texte coupé en
@@ -89,6 +90,7 @@ export default function Stage() {
       </div>
       <PenToolbar />
       <Viewport />
+      <VideoBar />
     </section>
   );
 }

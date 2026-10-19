@@ -3,6 +3,13 @@
 //! côté Rust ; le chemin reçu de l'interface est vérifié (absolu, fichier existant, extension vidéo).
 
 use serde::Serialize;
+use std::collections::HashMap;
+use std::path::PathBuf;
+use std::sync::atomic::{AtomicU32, Ordering};
+use std::sync::{Arc, Mutex};
+use std::time::SystemTime;
+use tauri::async_runtime::{self, channel, Mutex as AsyncMutex, Receiver};
+use tauri_plugin_shell::process::CommandChild;
 use serde_json::Value;
 use std::path::Path;
 use tauri::ipc::Response;
@@ -15,7 +22,7 @@ const ILLISIBLE: &str = "Ce fichier n'est pas une vidéo lisible.";
 
 /// Informations utiles d'une vidéo. Largeur et hauteur : dimensions affichées
 /// (rotation des vidéos de téléphone et pixels non carrés pris en compte).
-#[derive(Serialize, Debug, PartialEq)]
+#[derive(Serialize, Debug, PartialEq, Clone)]
 pub struct InfosVideo {
     pub largeur: u32,
     pub hauteur: u32,
@@ -122,7 +129,7 @@ pub fn arguments_ffprobe(chemin: &Path) -> Vec<String> {
 pub fn arguments_image(chemin: &Path, temps: f64, l: u32, h: u32) -> Vec<String> {
     vec![
         "-v".into(), "error".into(),
-        "-ss".into(), format!("{:.3}", temps.max(0.0)),
+        "-ss".into(), format!("{:.6}", temps.max(0.0)),
         "-i".into(), chemin.to_string_lossy().into_owned(),
         "-an".into(), "-sn".into(),
         "-frames:v".into(), "1".into(),
@@ -130,6 +137,24 @@ pub fn arguments_image(chemin: &Path, temps: f64, l: u32, h: u32) -> Vec<String>
         "-f".into(), "rawvideo".into(),
         "pipe:1".into(),
     ]
+}
+
+/// Lecture continue à partir de `temps` : toutes les images, réduites à l × h, en RGBA brut.
+pub fn arguments_lecture(chemin: &Path, temps: f64, l: u32, h: u32) -> Vec<String> {
+    let mut a = arguments_image(chemin, temps, l, h);
+    let i = a.iter().position(|x| x == "-frames:v").unwrap();
+    a.drain(i..i + 2);
+    a
+}
+
+/// Retire du tampon les images complètes (`taille` octets chacune) ; le reste attend la suite du flux.
+pub fn decouper(tampon: &mut Vec<u8>, taille: usize) -> Vec<Vec<u8>> {
+    let mut images = Vec::new();
+    while taille > 0 && tampon.len() >= taille {
+        let reste = tampon.split_off(taille);
+        images.push(std::mem::replace(tampon, reste));
+    }
+    images
 }
 
 /// En-tête des images renvoyées à l'interface : largeur et hauteur (u32 petit-boutiste), puis les pixels RGBA.
@@ -182,19 +207,36 @@ async fn sonder(app: &tauri::AppHandle, chemin: &Path) -> Result<InfosVideo, Str
     analyser_ffprobe(&String::from_utf8_lossy(&sortie.stdout))
 }
 
+/// Informations déjà lues, par chemin et date de modification : ffprobe n'est relancé que si le
+/// fichier change (déplacer le curseur de temps demande une image à chaque fois).
+#[derive(Default)]
+pub struct CacheInfos(Mutex<HashMap<PathBuf, (Option<SystemTime>, InfosVideo)>>);
+
+async fn sonder_cache(app: &tauri::AppHandle, cache: &CacheInfos, chemin: &Path) -> Result<InfosVideo, String> {
+    let date = std::fs::metadata(chemin).and_then(|m| m.modified()).ok();
+    if let Some((d, infos)) = cache.0.lock().unwrap().get(chemin) {
+        if *d == date {
+            return Ok(infos.clone());
+        }
+    }
+    let infos = sonder(app, chemin).await?;
+    cache.0.lock().unwrap().insert(chemin.to_path_buf(), (date, infos.clone()));
+    Ok(infos)
+}
+
 /// Informations d'une vidéo (ffprobe).
 #[tauri::command]
-pub async fn infos_video(app: tauri::AppHandle, chemin: String) -> Result<InfosVideo, String> {
+pub async fn infos_video(app: tauri::AppHandle, cache: tauri::State<'_, CacheInfos>, chemin: String) -> Result<InfosVideo, String> {
     let p = verifier_chemin(&chemin)?;
-    sonder(&app, p).await
+    sonder_cache(&app, &cache, p).await
 }
 
 /// Image de la vidéo à l'instant `temps` (secondes), plus grand côté ≤ `taille_max` :
 /// en-tête (largeur, hauteur) + pixels RGBA, en binaire brut.
 #[tauri::command]
-pub async fn image_video(app: tauri::AppHandle, chemin: String, temps: f64, taille_max: u32) -> Result<Response, String> {
+pub async fn image_video(app: tauri::AppHandle, cache: tauri::State<'_, CacheInfos>, chemin: String, temps: f64, taille_max: u32) -> Result<Response, String> {
     let p = verifier_chemin(&chemin)?;
-    let infos = sonder(&app, p).await?;
+    let infos = sonder_cache(&app, &cache, p).await?;
     let (l, h) = taille_sortie(infos.largeur, infos.hauteur, taille_max.max(1));
     let sortie = lancer(&app, "ffmpeg", arguments_image(p, temps, l, h)).await?;
     let attendu = (l as usize) * (h as usize) * 4;
@@ -204,6 +246,105 @@ pub async fn image_video(app: tauri::AppHandle, chemin: String, temps: f64, tail
     }
     Ok(Response::new(avec_entete(l, h, sortie.stdout)))
 }
+
+/* ---------- Lecture continue (aperçu) ---------- */
+
+/// Une session de lecture : un ffmpeg qui décode en continu, une tâche qui découpe son flux en images.
+/// La file d'images est bornée (2) et le plugin shell transmet la sortie par un canal de capacité 1 :
+/// si l'interface lit moins vite, ffmpeg attend ; la mémoire reste stable.
+pub struct Lecture {
+    enfant: Option<CommandChild>,
+    images: Receiver<Vec<u8>>,
+    l: u32,
+    h: u32,
+    suivante: u32,
+}
+
+#[derive(Default)]
+pub struct Lectures {
+    suivant: AtomicU32,
+    sessions: Mutex<HashMap<u32, Arc<AsyncMutex<Lecture>>>>,
+}
+
+/// Démarre une lecture à l'instant `temps`, images de plus grand côté ≤ `taille_max` → numéro de session.
+#[tauri::command]
+pub async fn lecture_debut(app: tauri::AppHandle, cache: tauri::State<'_, CacheInfos>, lectures: tauri::State<'_, Lectures>, chemin: String, temps: f64, taille_max: u32) -> Result<u32, String> {
+    let p = verifier_chemin(&chemin)?;
+    let infos = sonder_cache(&app, &cache, p).await?;
+    let (l, h) = taille_sortie(infos.largeur, infos.hauteur, taille_max.max(1));
+    let (mut flux, enfant) = app
+        .shell()
+        .sidecar("ffmpeg")
+        .map_err(|e| format!("ffmpeg introuvable : {e}"))?
+        .args(arguments_lecture(p, temps, l, h))
+        .set_raw_out(true)
+        .spawn()
+        .map_err(|e| format!("ffmpeg ne démarre pas : {e}"))?;
+    let (tx, rx) = channel::<Vec<u8>>(2);
+    let taille = (l as usize) * (h as usize) * 4;
+    async_runtime::spawn(async move {
+        let mut tampon = Vec::with_capacity(taille * 2);
+        while let Some(evenement) = flux.recv().await {
+            match evenement {
+                CommandEvent::Stdout(octets) => {
+                    tampon.extend(octets);
+                    for image in decouper(&mut tampon, taille) {
+                        if tx.send(image).await.is_err() {
+                            return; // session terminée
+                        }
+                    }
+                }
+                CommandEvent::Stderr(octets) => eprintln!("ffmpeg (lecture) : {}", String::from_utf8_lossy(&octets)),
+                CommandEvent::Terminated(_) => break,
+                _ => {}
+            }
+        }
+    });
+    let id = lectures.suivant.fetch_add(1, Ordering::Relaxed) + 1;
+    let session = Lecture { enfant: Some(enfant), images: rx, l, h, suivante: 0 };
+    lectures.sessions.lock().unwrap().insert(id, Arc::new(AsyncMutex::new(session)));
+    Ok(id)
+}
+
+/// Prochaine image de la session dont le numéro (depuis le début de la session) est ≥ `cible` :
+/// les images en retard sont sautées ici, sans passer par l'interface.
+/// En-tête (largeur, hauteur, numéro) + pixels RGBA ; réponse vide à la fin de la vidéo.
+#[tauri::command]
+pub async fn lecture_image(lectures: tauri::State<'_, Lectures>, id: u32, cible: u32) -> Result<Response, String> {
+    let session = lectures.sessions.lock().unwrap().get(&id).cloned().ok_or("Lecture terminée.")?;
+    let mut s = session.lock().await;
+    loop {
+        match s.images.recv().await {
+            Some(image) => {
+                let n = s.suivante;
+                s.suivante += 1;
+                if n < cible {
+                    continue;
+                }
+                let mut out = avec_entete(s.l, s.h, Vec::with_capacity(4 + image.len()));
+                out.extend_from_slice(&n.to_le_bytes());
+                out.extend(image);
+                return Ok(Response::new(out));
+            }
+            None => return Ok(Response::new(Vec::new())),
+        }
+    }
+}
+
+/// Arrête une lecture (ffmpeg arrêté, session oubliée).
+#[tauri::command]
+pub async fn lecture_fin(lectures: tauri::State<'_, Lectures>, id: u32) -> Result<(), String> {
+    let session = lectures.sessions.lock().unwrap().remove(&id);
+    if let Some(session) = session {
+        let mut s = session.lock().await;
+        if let Some(enfant) = s.enfant.take() {
+            let _ = enfant.kill();
+        }
+        s.images.close();
+    }
+    Ok(())
+}
+
 
 #[cfg(test)]
 mod tests {
@@ -262,7 +403,48 @@ mod tests {
         assert!(verifier_chemin(&std::env::temp_dir().join("x.txt").to_string_lossy()).is_err());
     }
 
+    #[test]
+    fn decoupe_le_flux_en_images() {
+        let mut t: Vec<u8> = (0..10).collect();
+        let images = decouper(&mut t, 4);
+        assert_eq!(images, vec![vec![0, 1, 2, 3], vec![4, 5, 6, 7]]);
+        assert_eq!(t, vec![8, 9]); // reste en attente de la suite
+        t.extend([10, 11]);
+        assert_eq!(decouper(&mut t, 4), vec![vec![8, 9, 10, 11]]);
+        assert!(t.is_empty());
+        let a = arguments_lecture(Path::new("C:/v.mp4"), 1.5, 320, 180);
+        assert!(!a.contains(&"-frames:v".to_string()));
+        assert_eq!(a[a.iter().position(|x| x == "-ss").unwrap() + 1], "1.500000");
+    }
+
     // ---- avec les vrais binaires (src-tauri/binaries, téléchargés par tools/get-ffmpeg.ps1) ----
+
+    #[test]
+    fn lecture_continue_et_image_exacte() {
+        let Some(ffmpeg) = binaire("ffmpeg") else { return };
+        let dir = std::env::temp_dir().join("glyphotrame-test-lecture");
+        std::fs::create_dir_all(&dir).unwrap();
+        let clip = dir.join("mire.mp4");
+        assert!(Command::new(&ffmpeg)
+            .args(["-v", "error", "-y", "-f", "lavfi", "-i", "testsrc2=size=320x180:rate=30:duration=2", "-c:v", "libx264", "-pix_fmt", "yuv420p"])
+            .arg(&clip).status().unwrap().success());
+        let taille = 160 * 90 * 4;
+        // lecture continue depuis 1 s : 30 images
+        let mut flux = Command::new(&ffmpeg).args(arguments_lecture(&clip, 1.0, 160, 90)).output().unwrap().stdout;
+        let images = decouper(&mut flux, taille);
+        assert_eq!((images.len(), flux.len()), (30, 0));
+        // depuis 0 : 60 images ; l'image n demandée seule à (n − ½) / cadence est identique, octet pour octet
+        let mut tout = Command::new(&ffmpeg).args(arguments_lecture(&clip, 0.0, 160, 90)).output().unwrap().stdout;
+        let toutes = decouper(&mut tout, taille);
+        assert_eq!(toutes.len(), 60);
+        for n in [0u32, 1, 2, 17, 31, 59] {
+            let t = ((n as f64) - 0.5).max(0.0) / 30.0;
+            let seule = Command::new(&ffmpeg).args(arguments_image(&clip, t, 160, 90)).output().unwrap().stdout;
+            assert!(seule == toutes[n as usize], "image {n} : la recherche n'est pas exacte");
+            assert!(n == 0 || toutes[n as usize] != toutes[n as usize - 1], "images {n} et {} identiques : test sans valeur", n - 1);
+        }
+        std::fs::remove_dir_all(dir).ok();
+    }
     fn binaire(nom: &str) -> Option<std::path::PathBuf> {
         let p = Path::new(env!("CARGO_MANIFEST_DIR")).join("binaries").join(format!("{nom}-x86_64-pc-windows-msvc.exe"));
         p.is_file().then_some(p)
