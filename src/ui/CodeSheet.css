@@ -1,0 +1,12 @@
+/* Feuille « Code » */
+.sheet{position:fixed;inset:0;background:var(--scrim);display:grid;place-items:center;padding:16px;z-index:10}
+.sheet-card{width:min(920px,100%);max-height:calc(100vh - 32px);display:flex;flex-direction:column;gap:12px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:18px;box-shadow:0 30px 80px -20px var(--shadow);min-width:0}
+.sheet-top{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+.sheet h3{margin:0;font:600 22px/1.1 var(--f-display);font-variation-settings:"opsz" 72}
+.sheet .tabs{display:flex;flex-wrap:wrap;gap:4px;padding:4px;background:var(--well);border-radius:8px;align-self:flex-start}
+.sheet .tabs button{border:0;background:transparent;border-radius:5px;padding:7px 12px;font-size:13px;font-weight:500;color:var(--muted);cursor:pointer}
+.sheet .tabs button[aria-selected="true"]{background:var(--panel);color:var(--ink);box-shadow:0 1px 2px var(--shadow)}
+.sheet textarea{width:100%;min-height:260px;height:46vh;resize:vertical;border:1px solid var(--line);border-radius:8px;background:var(--paper);padding:12px;font:12px/1.5 var(--f-mono);white-space:pre;overflow:auto;overflow-wrap:normal}
+.sheet-foot{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:10px}
+.sheet-foot .hint{max-width:52ch}
+.sheet-foot .actions{display:flex;gap:6px;flex-wrap:wrap}

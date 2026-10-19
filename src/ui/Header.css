@@ -1,0 +1,7 @@
+.bar{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px 20px}
+.brand{display:flex;align-items:center;gap:12px;min-width:0}
+.mark{flex:none;width:46px;height:46px;border-radius:8px;background:var(--ink);color:var(--paper);display:grid;grid-template-columns:repeat(3,1fr);place-items:center;padding:6px;font:500 11px/1 var(--f-mono)}
+.brand h1{margin:0;font:600 28px/1 var(--f-display);font-variation-settings:"opsz" 96;letter-spacing:-.015em}
+.brand p{margin:4px 0 0;color:var(--muted);font-size:13px}
+.exports{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
+.exports .lbl{font:600 11px/1 var(--f-ui);letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-right:4px}

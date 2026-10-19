@@ -17,6 +17,17 @@ La référence y est chargée en mémoire et son script est seulement complété
 
 À relancer après toute modification de `src/engine/`.
 
+## Rendu logiciel ou accéléré
+
+Le résultat dépend légèrement du rendu canvas : avec la carte graphique (WebView2 dans Tauri, navigateur normal), l'image d'exemple donne 7 975 glyphes ; en rendu logiciel (`npm run compare`, Edge sans carte graphique), 7 966. La référence et l'application donnent toujours le même chiffre dans le même environnement : ce n'est pas un écart du portage.
+
+## Interface (phase 1)
+
+- État : `src/state/` — deux stores (`settings` = réglages, même forme que `state` dans la référence ; `session` = état de l'interface), `renderer.js` relie les réglages au moteur (recalcul complet ou simple recomposition, comme `schedule` / `scheduleGrad`), `actions.js` regroupe les changements qui en entraînent d'autres, `pen.js` l'historique et les outils de la plume.
+- Fichiers : `src/platform/files.js` — boîtes Ouvrir / Enregistrer de Tauri, glisser-déposer natif (les fichiers déposés sont lisibles par le plugin fs sans permission en plus). Dans un simple navigateur (`npm run dev`), repli sur le sélecteur de fichier et le téléchargement.
+- Vérifié en jouant les mêmes clics dans l'application et la référence (Edge sans fenêtre, protocole DevTools) : 34 étapes de réglages, 24 gestes de plume, éditeur de courbe, pipette, vues, fenêtre Code. Seules différences : l'ordre des classes CSS sur les points d'ancrage et le chemin du tracé vidé quand il est masqué (invisible dans les deux cas).
+- Différences voulues : bouton « Enregistrer… » au lieu de « Télécharger » dans la fenêtre Code ; curseur « Taille max de l'image source » dans la section Image.
+
 ## Particularités de la référence reproduites à l'identique
 
 À corriger éventuellement après la phase 1 (le banc de comparaison signalera alors l'écart, c'est voulu).

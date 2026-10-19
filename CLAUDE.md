@@ -31,7 +31,13 @@ Commandes :
 ```
 src/
   main.jsx, App.jsx
-  state/        état global (un seul store, même forme que l'objet `state` de la référence)
+  state/        état global
+    index.js        stores `settings` (même forme que l'objet `state` de la référence) et `session` (interface)
+    defaults.js     réglages par défaut
+    renderer.js     relie les réglages au moteur et dessine l'aperçu
+    actions.js      actions de l'interface (réglages liés, chargement, pipette, exports)
+    pen.js          outil plume : outil actif, historique, boutons
+  platform/     Tauri : boîtes de dialogue, lecture / écriture de fichiers, glisser-déposer
   engine/       moteur pur JavaScript, sans React, porté depuis la référence
     index.js        point d'entrée (réexporte tous les modules)
     util.js         outils communs, createCanvas
@@ -49,8 +55,11 @@ src/
     export-svg.js   export SVG vectoriel (masques, filtres, motifs)
     export-html.js  export HTML + CSS, texte brut
   gpu/          rendu WebGL2 de l'aperçu (phase 2)
-  ui/           composants : panneau, sections, curseurs, sélecteurs, éditeur de courbe,
-                barre d'outils plume, zone d'aperçu (résultat / côte à côte / curseur), fenêtre Code
+  ui/           composants (un fichier CSS par composant, classes identiques à la référence)
+    controls/       curseur, boutons segmentés, cases, interrupteur, couleur
+    panel/          colonne de réglages, une section par bloc, éditeur de courbe
+    stage/          aperçu (vues, curseur avant-après), barre et gestes de la plume
+    Header, CodeSheet, Toast
 src-tauri/      côté Rust : plugins dialog + fs, configuration de la fenêtre
 reference/      version HTML d'origine (ne pas modifier)
 tools/          banc de comparaison moteur ↔ référence (`npm run compare`), hors application

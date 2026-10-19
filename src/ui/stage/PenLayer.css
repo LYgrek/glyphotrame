@@ -1,0 +1,23 @@
+/* Courbe libre sur l'aperçu */
+.cwrap{position:relative;width:fit-content;max-width:100%;line-height:0}
+.curve-ui{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;overflow:hidden}
+/* Tracé plume (couleurs fixes : lisibles sur n'importe quelle image) */
+.cu-ext{fill:none;stroke:#1e8bff;stroke-width:1;stroke-dasharray:3 4;stroke-opacity:.7;vector-effect:non-scaling-stroke}
+.cu-under{fill:none;stroke:#fff;stroke-width:3.5;stroke-opacity:.8;vector-effect:non-scaling-stroke}
+.cu-line{fill:none;stroke:#1e8bff;stroke-width:1.6;vector-effect:non-scaling-stroke}
+.cu-rubber{fill:none;stroke:#1e8bff;stroke-width:1.2;stroke-dasharray:4 3;vector-effect:non-scaling-stroke}
+.cu-arms{fill:none;stroke:#1e8bff;stroke-width:1;vector-effect:non-scaling-stroke}
+.curve-handles{position:absolute;inset:0;pointer-events:none}
+.pen-anchor,.pen-knob{position:absolute;padding:0;pointer-events:auto;touch-action:none;box-shadow:0 0 0 1px rgba(255,255,255,.8)}
+.pen-anchor{width:11px;height:11px;margin:-5.5px 0 0 -5.5px;background:#fff;border:1.5px solid #1e8bff;border-radius:1px;cursor:move}
+.pen-anchor.smooth{border-radius:50%}
+.pen-anchor.sel{background:#1e8bff}
+.pen-anchor.first{width:13px;height:13px;margin:-6.5px 0 0 -6.5px}
+.pen-knob{width:9px;height:9px;margin:-4.5px 0 0 -4.5px;border-radius:50%;background:#1e8bff;border:1.5px solid #fff;cursor:pointer}
+.pen-anchor:focus-visible,.pen-knob:focus-visible{outline:2px solid #ffb800;outline-offset:2px}
+.cwrap.pen-on{cursor:crosshair;touch-action:none}
+.cwrap.pen-on.tool-select{cursor:default}
+.cwrap.tool-del .pen-anchor{cursor:not-allowed}
+.cwrap.tool-convert .pen-anchor{cursor:crosshair}
+.cwrap.near-first .pen-anchor.first{box-shadow:0 0 0 3px #ffb800}
+.viewport[data-view="wipe"] .curve-ui,.viewport[data-view="wipe"] .curve-handles{display:none}

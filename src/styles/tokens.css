@@ -1,0 +1,26 @@
+/* Identité visuelle de la référence : couleurs, thèmes clair / sombre, polices */
+:root{
+  --paper:#e9ecf0; --panel:#f8f9fb; --well:#dde2e9; --dot:#c3cad5;
+  --line:#d3d8e0; --ink:#14161b; --muted:#5a6270;
+  --accent:#2336d1; --accent-ink:#ffffff; --accent-soft:#e3e6fb;
+  --scrim:rgba(18,20,26,.45); --shadow:rgba(20,24,40,.22);
+  --f-ui:"Archivo",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-display:"Fraunces",Georgia,"Times New Roman",serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --paper:#101217; --panel:#171a20; --well:#0b0d11; --dot:#232833;
+    --line:#282d37; --ink:#e7e9ef; --muted:#98a0ae;
+    --accent:#8a97ff; --accent-ink:#0c0e14; --accent-soft:#1f2442;
+    --scrim:rgba(0,0,0,.6); --shadow:rgba(0,0,0,.55);
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#101217; --panel:#171a20; --well:#0b0d11; --dot:#232833;
+  --line:#282d37; --ink:#e7e9ef; --muted:#98a0ae;
+  --accent:#8a97ff; --accent-ink:#0c0e14; --accent-soft:#1f2442;
+  --scrim:rgba(0,0,0,.6); --shadow:rgba(0,0,0,.55);
+  color-scheme:dark;
+}

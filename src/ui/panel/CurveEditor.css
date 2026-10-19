@@ -1,0 +1,16 @@
+/* Éditeur de courbe de progression */
+.curve-editor{border:1px solid var(--line);border-radius:8px;background:var(--paper);padding:6px}
+.curve-editor svg{display:block;width:100%;height:auto;touch-action:none;user-select:none}
+.ce-bg{fill:var(--panel);stroke:var(--line)}
+.ce-grid{stroke:var(--line);stroke-width:.6;fill:none}
+.ce-arm{stroke:var(--muted);stroke-width:1;stroke-dasharray:3 2}
+.ce-curve{fill:none;stroke:var(--accent);stroke-width:2.5;stroke-linecap:round}
+.ce-end{fill:var(--accent)}
+.ce-handle{fill:var(--panel);stroke:var(--accent);stroke-width:2.5;cursor:grab}
+.ce-handle:hover,.ce-handle:focus-visible{fill:var(--accent-soft);outline:none;stroke-width:3.5}
+.ce-handle.drag{cursor:grabbing;fill:var(--accent)}
+.ce-lbl{font:500 8.5px var(--f-ui);fill:var(--muted)}
+.presets{display:flex;flex-wrap:wrap;gap:4px}
+.presets button{padding:6px 9px;border:1px solid var(--line);border-radius:14px;background:var(--paper);font-size:12px;cursor:pointer}
+.presets button:hover{border-color:var(--ink)}
+.presets button[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}

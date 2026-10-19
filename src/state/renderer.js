@@ -1,0 +1,103 @@
+/* Contrôleur du rendu : relie les réglages au moteur et dessine dans les canvas de l'aperçu.
+   Comme dans la référence :
+   - un changement de réglage relance le calcul complet (schedule), une seule fois par image affichée ;
+   - le dégradé (g…) et les effets d'écran (fx…) ne font que recomposer l'image (scheduleGrad) ;
+   - pendant un glissement (courbe, plume), les masques sont calculés en basse définition. */
+import * as E from '../engine/index.js';
+import { settings, session } from './index.js';
+
+let src = null, grid = null;
+let cutDirty = true, pending = false, gradPending = false, dragging = false;
+let renderId = 0, fontRetries = 0, silent = false, started = false;
+const canvases = { out: null, orig: null, cutPreview: null };
+
+// références React des canvas (stables)
+export const canvasRef = {
+  out: (el) => { canvases.out = el; },
+  orig: (el) => { canvases.orig = el; },
+  cutPreview: (el) => { canvases.cutPreview = el; }
+};
+
+export const getGrid = () => grid;
+export const getSource = () => src;
+
+const previewDim = () => dragging ? 320 : 760;
+
+export function schedule() {
+  if (pending) return; pending = true;
+  requestAnimationFrame(() => { pending = false; render(); });
+}
+// changement du dégradé seul : on recompose sans recalculer la grille
+export function scheduleGrad() {
+  if (pending || gradPending) return; gradPending = true;
+  requestAnimationFrame(() => {
+    gradPending = false;
+    if (!grid || pending) { schedule(); return; }
+    if (canvases.out) E.draw(canvases.out.getContext('2d'), grid, settings.get(), src, 1, false, previewDim());
+  });
+}
+export function setDragging(on) { dragging = on; }
+export function endDrag() { if (!dragging) return; dragging = false; scheduleGrad(); }
+
+async function render() {
+  if (!src) return;
+  if (cutDirty) {
+    cutDirty = false;
+    const st = settings.get();
+    const r = E.applyCutout(st, src);
+    src = r.src;
+    // couleur détectée : affichée dans le champ, sans relancer le détourage
+    if (st.cut && r.cutColor !== st.cutColor) { silent = true; settings.set({ cutColor: r.cutColor }); silent = false; }
+    if (canvases.cutPreview) E.drawCutPreview(canvases.cutPreview, src.image);
+  }
+  const id = ++renderId;
+  const res = await E.compute(settings.get(), src, () => id !== renderId);
+  if (!res) return;
+  grid = res.grid;
+  const st = settings.get();
+  if (canvases.out) E.draw(canvases.out.getContext('2d'), grid, st, src, 1, false, previewDim());
+  if (canvases.orig) E.drawOrig(canvases.orig, grid, st, src);
+  session.set({ stats: { kind: grid.kind, cols: grid.cols, rows: grid.rows, count: grid.count, W: grid.W, H: grid.H, type: grid.type, cmyk: grid.cmyk, htCell: st.htCell } });
+  if (!res.ready && fontRetries < 4) { fontRetries++; setTimeout(schedule, 500); }
+}
+
+// réglages sans effet sur l'image
+const QUIET = new Set(['zoom', 'scale', 'gShowCurve']);
+const CUT_KEYS = new Set(['cut', 'cutAuto', 'cutColor', 'tol', 'soft', 'flood']);
+function onSettings(next, prev) {
+  if (silent) return;
+  let full = false, comp = false;
+  for (const k in next) {
+    if (next[k] === prev[k] || QUIET.has(k)) continue;
+    if (k === 'srcMax') { refit(next.srcMax); full = true; }
+    else if (CUT_KEYS.has(k)) { cutDirty = true; full = true; }
+    else if (k === 'grad' || /^g[A-Z]/.test(k) || /^fx/.test(k)) comp = true;
+    else { full = true; if (k === 'font') fontRetries = 0; }
+  }
+  if (full) schedule(); else if (comp) scheduleGrad();
+}
+
+// taille max changée : on réduit à nouveau l'image d'origine
+function refit(maxDim) {
+  if (!src || !src.original) return;
+  src = E.createSource(E.fitImage(src.original, maxDim), src.name, src.original);
+  cutDirty = true;
+}
+
+// nouvelle image source (canvas déjà réduit) ; original = image décodée, pour la taille max
+export function setSource(canvas, name, original = null) {
+  src = E.createSource(canvas, name, original);
+  cutDirty = true;
+  if (!settings.get().cutAuto) { silent = true; settings.set({ cutAuto: true }); silent = false; }
+  session.set({ sourceName: name });
+  schedule();
+}
+
+// démarrage (une seule fois) : image d'exemple, abonnement aux réglages, polices
+export function start() {
+  if (started) return;
+  started = true;
+  settings.subscribe(onSettings);
+  setSource(E.makeSample(), 'exemple-sphere.png');
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { E.clearDensityCache(); schedule(); });
+}
