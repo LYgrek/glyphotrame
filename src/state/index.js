@@ -18,7 +18,11 @@ export const session = createStore({
   penHover: null,       // position du pointeur (relative) pour l'élastique
   penBusy: false,       // glissement en cours avec l'outil plume
   nearFirst: false,     // survol du premier point (fermer le tracé)
-  canUndo: false, canRedo: false
+  canUndo: false, canRedo: false,
+  // rendu de l'aperçu et des exports PNG / JPEG : carte graphique (WebGL2) ou canvas 2D
+  // (?rendu=canvas dans l'adresse force le canvas 2D, utilisé par le banc compare:ui)
+  rendu: typeof location !== 'undefined' && new URLSearchParams(location.search).get('rendu') === 'canvas' ? 'canvas' : 'gpu',
+  gpuOk: null           // null : pas encore essayé ; false : WebGL2 indisponible
 });
 
 export const useSetting = (k) => useStore(settings, (s) => s[k]);

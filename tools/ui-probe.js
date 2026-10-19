@@ -89,18 +89,49 @@ window.T = {
   },
 
   // empreinte des pixels d'un canvas
+  // pixels d'un canvas 2D ou WebGL (copie dans un canvas 2D)
+  pixels(c) {
+    const ctx2d = c.getContext('2d');   // null pour un canvas WebGL
+    if (ctx2d) return ctx2d.getImageData(0, 0, c.width, c.height);
+    const t = document.createElement('canvas'); t.width = c.width; t.height = c.height;
+    const x = t.getContext('2d'); x.drawImage(c, 0, 0);
+    return x.getImageData(0, 0, t.width, t.height);
+  },
   hash(sel) {
     const c = document.querySelector(sel);
     if (!c) return '(absent)';
-    const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data;
+    const d = T.pixels(c).data;
     let h = 2166136261; for (let i = 0; i < d.length; i++) { h ^= d[i]; h = Math.imul(h, 16777619); }
     return c.width + '×' + c.height + ' ' + (h >>> 0).toString(16);
+  },
+  // écart (valeurs prémultipliées) entre deux images : canvas ou adresse data: d'une image
+  async cmp(a, b, maxMean = 1.5, maxVisible = 1.5) {
+    const load = async (s) => {
+      if (typeof s !== 'string') return T.pixels(document.querySelector(s.sel));
+      const img = await new Promise((r) => { const i = new Image(); i.onload = () => r(i); i.src = s; });
+      const t = document.createElement('canvas'); t.width = img.width; t.height = img.height;
+      const x = t.getContext('2d'); x.drawImage(img, 0, 0);
+      return x.getImageData(0, 0, t.width, t.height);
+    };
+    const [A, B] = await Promise.all([load(a), load(b)]);
+    if (A.width !== B.width || A.height !== B.height) return `taille ${A.width}×${A.height} ≠ ${B.width}×${B.height}`;
+    let sum = 0, vis = 0;
+    for (let i = 0; i < A.data.length; i += 4) {
+      let m = 0;
+      for (let c = 0; c < 4; c++) {
+        const va = c < 3 ? A.data[i + c] * A.data[i + 3] / 255 : A.data[i + 3], vb = c < 3 ? B.data[i + c] * B.data[i + 3] / 255 : B.data[i + 3];
+        const d = Math.abs(va - vb); sum += d; if (d > m) m = d;
+      }
+      if (m > 48) vis++;
+    }
+    const mean = sum / A.data.length, visible = vis / (A.data.length / 4) * 100;
+    return mean <= maxMean && visible <= maxVisible ? 'proche' : `écart moyen ${mean.toFixed(2)}, ${visible.toFixed(2)} % de pixels nets`;
   },
   // état visible des contrôles d'une zone, une ligne par élément, dans l'ordre du document
   ui(rootSel) {
     const root = document.querySelector(rootSel);
     if (!root || !T.shown(root)) return ['(masqué)'];
-    const skipped = [...root.querySelectorAll('.field')].filter((f) => { const l = f.querySelector('label'); return l && T.skip.some((s) => T.norm(l.textContent).startsWith(s)); });
+    const skipped = [...root.querySelectorAll('.field')].filter((f) => { const l = f.querySelector('label, .name'); return l && T.skip.some((s) => T.norm(l.textContent).startsWith(s)); });
     const txt = (el) => { const t = T.norm(el.textContent); return T.rename[t] || t; };
     const out = [];
     for (const el of root.querySelectorAll('.drop,h2,h3,label,output,button,input,select,textarea,p,.stats,code,em,[aria-disabled],.neon-bar,summary,kbd,figcaption')) {

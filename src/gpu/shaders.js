@@ -56,16 +56,29 @@ float sdPoly(vec2 p) {
   }
   return s * sqrt(d);
 }
-void main() {
-  float d;
-  if (u_kind == 0) d = length(v_local) - 1.0;
-  else if (u_kind == 1) {
-    vec2 q = vec2(u_rot.x * v_local.x + u_rot.y * v_local.y, -u_rot.y * v_local.x + u_rot.x * v_local.y);
+uniform float u_extent;
+float dist(vec2 p) {
+  if (u_kind == 0) return length(p) - 1.0;
+  if (u_kind == 1) {
+    vec2 q = vec2(u_rot.x * p.x + u_rot.y * p.y, -u_rot.y * p.x + u_rot.x * p.y);
     vec2 e = q / u_ell; float k = length(e);
     vec2 g = e / (u_ell * max(k, 1e-6));
-    d = (k - 1.0) / max(length(g), 1e-6);
-  } else d = sdPoly(v_local);
-  float a = clamp(0.5 - d * v_px, 0.0, 1.0);
+    return (k - 1.0) / max(length(g), 1e-6);
+  }
+  return sdPoly(p);
+}
+void main() {
+  vec2 dx = dFdx(v_local), dy = dFdy(v_local);
+  float a;
+  if (v_px * u_extent < 4.0) {
+    // petite forme (quelques pixels) : couverture réelle, mesurée sur 4 × 4 sous-échantillons
+    a = 0.0;
+    for (int i = 0; i < 4; i++) for (int j = 0; j < 4; j++) {
+      vec2 o = (vec2(i, j) - 1.5) / 4.0;
+      a += clamp(0.5 - dist(v_local + o.x * dx + o.y * dy) * v_px * 4.0, 0.0, 1.0);
+    }
+    a /= 16.0;
+  } else a = clamp(0.5 - dist(v_local) * v_px, 0.0, 1.0);
   if (a <= 0.0) discard;
   o = u_mode == 0 ? vec4(a) : vec4(v_col * a, a);
 }`;
@@ -117,8 +130,9 @@ void main() {
     base.x = (m - k) / u_phases + floor(ox + (k + 0.5) / u_phases);
     base.y = floor(a.y - u_oy) + floor(u_oy + 0.5);
   }
-  float cell = a_glyph.x * u_phases + k;
-  vec2 cellPos = vec2(mod(cell, u_cols), floor(cell / u_cols)) * u_cell;
+  // calcul en entiers : en flottants, 7.0 / 7.0 peut donner 0,99999994 et tomber dans la mauvaise case
+  int cell = int(a_glyph.x * u_phases + k + 0.5), cols = int(u_cols + 0.5);
+  vec2 cellPos = vec2(float(cell % cols), float(cell / cols)) * u_cell;
   v_uv = (cellPos + a_corner * u_cell) / u_atlas;
   v_col = a_col;
   gl_Position = clip(base - u_pad + a_corner * u_cell);

@@ -19,7 +19,8 @@ const here = dirname(fileURLToPath(import.meta.url));
 const PROBE = readFileSync(join(here, 'ui-probe.js'), 'utf8');
 const DIFF_DIR = join(here, '.ui-diff');
 // différences voulues : réglage ajouté, bouton renommé
-const SKIP = ["Taille max de l'image source"];
+// différences voulues : réglages ajoutés (taille max de la source, rendu GPU / canvas), bouton renommé
+const SKIP = ["Taille max de l'image source", "Rendu de l'aperçu"];
 const RENAME = { 'Enregistrer…': 'Télécharger' };
 
 /* ---------- Actions ---------- */
@@ -288,7 +289,7 @@ async function shots(p) {
     const st = document.createElement('style'); st.id = 'cmp-shot';
     st.textContent = '.controls{max-height:none!important;overflow:visible!important}*{transition:none!important;caret-color:transparent!important}';
     document.head.append(st);
-    for (const f of document.querySelectorAll('.controls .field')) { const l = f.querySelector('label'); if (l && T.skip.some((s) => T.norm(l.textContent).startsWith(s))) f.style.display = 'none'; }
+    for (const f of document.querySelectorAll('.controls .field')) { const l = f.querySelector('label, .name'); if (l && T.skip.some((s) => T.norm(l.textContent).startsWith(s))) f.style.display = 'none'; }
     window.scrollTo(0, 0);
     const zones = [...document.querySelectorAll('.controls .group')].filter(T.shown).map((g) => ['section ' + g.querySelector('h2').textContent, g]);
     zones.push(['en-tête', document.querySelector('.bar')], ['tête de l\\'aperçu', document.querySelector('.stage-head')]);
@@ -311,11 +312,15 @@ const pixelDiff = (p, a, b) => p.eval(`(async () => {
 })()`);
 
 /* ---------- Exécution ---------- */
-const only = process.argv.slice(2);
+const args = process.argv.slice(2);
+// --gpu : application en rendu carte graphique (aperçu et PNG / JPEG comparés avec tolérance, comme compare:gpu)
+const GPU = args.includes('--gpu');
+const only = args.filter((a) => !a.startsWith('--'));
 const vite = await startVite();
 const dl = { app: mkdtempSync(join(tmpdir(), 'glypho-dl-app-')), ref: mkdtempSync(join(tmpdir(), 'glypho-dl-ref-')) };
-const app = await openPage(vite.url);
-const ref = await openPage(vite.url + 'reference/glyphotrame-reference.html');
+// rendu canvas 2D forcé (sauf --gpu) : la comparaison avec la référence se fait alors au pixel près
+const app = await openPage(vite.url + (GPU ? '' : '?rendu=canvas'), { gpu: GPU });
+const ref = await openPage(vite.url + 'reference/glyphotrame-reference.html', { gpu: GPU });
 const pages = { app, ref };
 rmSync(DIFF_DIR, { recursive: true, force: true });
 let total = 0, ko = 0, shotKo = 0;
@@ -350,6 +355,12 @@ try {
       }
       const [a, r] = await Promise.all([app.eval(SNAP), ref.eval(SNAP)]);
       a['retour de l\'action'] = res.app ?? ''; r['retour de l\'action'] = res.ref ?? '';
+      if (GPU) {
+        // rendu GPU : l'aperçu est comparé avec la tolérance du banc compare:gpu (anticrénelage différent)
+        const url = await ref.eval("document.querySelector('.pane.after canvas').toDataURL('image/png')");
+        a['aperçu (résultat)'] = await app.eval(`T.cmp({ sel: '.pane.after canvas' }, ${JSON.stringify(url)})`);
+        r['aperçu (résultat)'] = 'proche';
+      }
       const diffs = Object.keys(a).filter((k) => JSON.stringify(a[k]) !== JSON.stringify(r[k]));
       if (diffs.length) ko++;
       const msg = [].concat(a.messages).filter(Boolean).join(' / ');
@@ -389,6 +400,13 @@ try {
       if (!fa.includes(f) || !fr.includes(f)) { ko++; console.log(`  ✗ ${f} : seulement dans ${fa.includes(f) ? "l'application" : 'la référence'}`); continue; }
       const A = readFileSync(join(dl.app, f)), B = readFileSync(join(dl.ref, f));
       if (A.equals(B)) console.log(`  ✓ ${f} (${A.length.toLocaleString('fr-FR')} octets)`);
+      else if (GPU && /\.(png|jpg)$/.test(f)) {
+        // export rendu par la carte graphique : comparé en pixels, avec tolérance
+        const mime = f.endsWith('.png') ? 'image/png' : 'image/jpeg', u = (b) => JSON.stringify(`data:${mime};base64,${b.toString('base64')}`);
+        const res = await app.eval(`T.cmp(${u(A)}, ${u(B)})`);
+        if (res === 'proche') console.log(`  ✓ ${f} (rendu GPU proche de la référence)`);
+        else { ko++; console.log(`  ✗ ${f} : ${res}`); }
+      }
       else { ko++; console.log(`  ✗ ${f} : ${A.length} / ${B.length} octets`); }
     }
   }

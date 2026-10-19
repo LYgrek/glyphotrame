@@ -2,18 +2,38 @@
    Comme dans la référence :
    - un changement de réglage relance le calcul complet (schedule), une seule fois par image affichée ;
    - le dégradé (g…) et les effets d'écran (fx…) ne font que recomposer l'image (scheduleGrad) ;
-   - pendant un glissement (courbe, plume), les masques sont calculés en basse définition. */
+   - pendant un glissement (courbe, plume), les masques sont calculés en basse définition.
+   L'aperçu est dessiné par la carte graphique (WebGL2) ou, en secours, par le canvas 2D du moteur. */
 import * as E from '../engine/index.js';
-import { settings, session } from './index.js';
+import { createGpuRenderer } from '../gpu/index.js';
+import { settings, session, toast } from './index.js';
 
-let src = null, grid = null;
+let src = null, grid = null, gpu = null;
 let cutDirty = true, pending = false, gradPending = false, dragging = false;
 let renderId = 0, fontRetries = 0, silent = false, started = false, pendingMax = 0;
 const canvases = { out: null, orig: null, cutPreview: null };
 
-// références React des canvas (stables)
+// carte graphique perdue ou indisponible : retour au canvas 2D (le canvas de l'aperçu est recréé)
+function fallBack(msg) {
+  gpu = null;
+  session.set({ rendu: 'canvas', gpuOk: false });
+  toast(msg);
+}
+
+// références React des canvas (stables). Le canvas du résultat change quand on change de rendu.
 export const canvasRef = {
-  out: (el) => { canvases.out = el; },
+  out: (el) => {
+    if (gpu) { gpu.dispose(); gpu = null; }
+    canvases.out = el;
+    if (!el) return;
+    if (session.get().rendu === 'gpu') {
+      gpu = createGpuRenderer(el);
+      if (!gpu) { fallBack("WebGL2 n'est pas disponible : l'aperçu passe en canvas 2D."); return; }
+      if (session.get().gpuOk !== true) session.set({ gpuOk: true });
+      el.addEventListener('webglcontextlost', (e) => { e.preventDefault(); fallBack('La carte graphique ne répond plus : l\'aperçu repasse en canvas 2D.'); }, { once: true });
+    }
+    if (grid) scheduleGrad();
+  },
   orig: (el) => { canvases.orig = el; },
   cutPreview: (el) => { canvases.cutPreview = el; }
 };
@@ -22,6 +42,14 @@ export const getGrid = () => grid;
 export const getSource = () => src;
 
 const previewDim = () => dragging ? 320 : 760;
+
+// dessine la grille courante dans le canvas du résultat
+function drawOut(st) {
+  const el = canvases.out;
+  if (!el || !grid) return;
+  if (gpu) gpu.draw(grid, st, src, 1, false, previewDim());
+  else if (session.get().rendu === 'canvas') E.draw(el.getContext('2d'), grid, st, src, 1, false, previewDim());
+}
 
 export function schedule() {
   if (pending) return; pending = true;
@@ -33,7 +61,7 @@ export function scheduleGrad() {
   requestAnimationFrame(() => {
     gradPending = false;
     if (!grid || pending) { schedule(); return; }
-    if (canvases.out) E.draw(canvases.out.getContext('2d'), grid, settings.get(), src, 1, false, previewDim());
+    drawOut(settings.get());
   });
 }
 export function setDragging(on) { dragging = on; }
@@ -57,7 +85,7 @@ async function render() {
   if (!res) return;
   grid = res.grid;
   const st = settings.get();
-  if (canvases.out) E.draw(canvases.out.getContext('2d'), grid, st, src, 1, false, previewDim());
+  drawOut(st);
   if (canvases.orig) E.drawOrig(canvases.orig, grid, st, src);
   session.set({ stats: { kind: grid.kind, cols: grid.cols, rows: grid.rows, count: grid.count, W: grid.W, H: grid.H, type: grid.type, cmyk: grid.cmyk, htCell: st.htCell } });
   if (!res.ready && fontRetries < 4) { fontRetries++; setTimeout(schedule, 500); }

@@ -1,5 +1,6 @@
 import { fmt } from '../../engine/index.js';
-import { useSetting, useSession, setSettings } from '../../state/index.js';
+import { session, useSetting, useSession, setSettings } from '../../state/index.js';
+import Seg from '../controls/Seg.jsx';
 import { fxPreset, fxReset } from '../../state/actions.js';
 import Slider from '../controls/Slider.jsx';
 import { Check } from '../controls/Toggles.jsx';
@@ -29,9 +30,18 @@ export function ScreenFxSection() {
 
 export function OutputSection() {
   const scale = useSetting('scale'), stats = useSession('stats');
+  const rendu = useSession('rendu'), gpuOk = useSession('gpuOk');
   return (
     <section className="group">
       <h2>Sortie</h2>
+      <div className="field">
+        <span className="name">Rendu de l'aperçu et des PNG / JPEG</span>
+        <Seg label="Rendu" value={rendu} onChange={(v) => session.set({ rendu: v })}
+          options={[{ value: 'gpu', label: 'Carte graphique', disabled: gpuOk === false }, { value: 'canvas', label: 'Canvas 2D' }]} />
+        <p className="hint">{gpuOk === false
+          ? "WebGL2 n'est pas disponible sur cet ordinateur : le rendu passe par le canvas 2D."
+          : 'La carte graphique rend l’aperçu et les grands exports bien plus vite. Le canvas 2D reproduit exactement la version d’origine.'}</p>
+      </div>
       <div className="field">
         <div className="row">
           <label htmlFor="scale">Résolution PNG / JPEG</label>

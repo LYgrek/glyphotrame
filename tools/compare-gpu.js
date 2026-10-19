@@ -18,7 +18,9 @@ const MAX_MEAN = 1.5, MAX_VISIBLE = 0.5;
 // - CMJN : quatre encres superposées, donc quatre fois plus de bords anticrénelés.
 const ALLOW = {
   'Halftone · lignes en couleurs': { mean: 2.5, visible: 2 },
-  'Halftone · CMJN': { mean: 1.5, visible: 1 }
+  'Halftone · CMJN': { mean: 1.5, visible: 1 },
+  // trame de 4 px : points de 2 à 4 px, l'anticrénelage pèse sur une grande part des pixels (rendus indiscernables à l'œil)
+  'Halftone · trame très fine': { mean: 3.5, visible: 1.5 }
 };
 
 const $ = (s) => document.querySelector(s);

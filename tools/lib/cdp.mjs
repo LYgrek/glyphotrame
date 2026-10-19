@@ -4,6 +4,7 @@ import { spawn } from 'node:child_process';
 import { existsSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { createServer } from 'vite';
 
 export const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -16,9 +17,10 @@ const BROWSERS = [
   '/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge'
 ];
 
-// serveur Vite du projet sur un port libre → { url, close }
+// serveur Vite du projet (quel que soit le dossier courant) sur un port libre → { url, close }
 export async function startVite() {
-  const server = await createServer({ server: { port: 1430, strictPort: false, hmr: false }, logLevel: 'error' });
+  const root = fileURLToPath(new URL('../..', import.meta.url));
+  const server = await createServer({ root, configFile: join(root, 'vite.config.js'), server: { port: 1430, strictPort: false, hmr: false }, logLevel: 'error' });
   await server.listen();
   return { url: server.resolvedUrls.local[0], close: () => server.close() };
 }

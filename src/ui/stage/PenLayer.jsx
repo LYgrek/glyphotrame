@@ -11,7 +11,7 @@ export default function PenLayer({ onPick }) {
   usePenTool(wrap);
   const grad = useSetting('grad'), gShape = useSetting('gShape'), show = useSetting('gShowCurve'), path = useSetting('gPath');
   const transparent = useSetting('transparent');
-  const picking = useSession('picking'), tool = useSession('penTool'), selNode = useSession('selNode');
+  const picking = useSession('picking'), tool = useSession('penTool'), selNode = useSession('selNode'), rendu = useSession('rendu');
   const hover = useSession('penHover'), busy = useSession('penBusy'), nearFirst = useSession('nearFirst');
   const vis = grad && gShape === 'libre' && show;
 
@@ -25,7 +25,8 @@ export default function PenLayer({ onPick }) {
   const pos = (p) => ({ left: p.x * 100 + '%', top: p.y * 100 + '%' });
   return (
     <div className={cls} ref={wrap}>
-      <canvas ref={canvasRef.out} className={[transparent && 'checker', picking && 'picking'].filter(Boolean).join(' ') || undefined}
+      {/* un canvas par mode de rendu : un canvas WebGL ne peut pas redevenir un canvas 2D */}
+      <canvas key={rendu} ref={canvasRef.out} className={[transparent && 'checker', picking && 'picking'].filter(Boolean).join(' ') || undefined}
         role="img" aria-label="Aperçu de l'image convertie en caractères" onClick={onPick}></canvas>
       <svg className="curve-ui" viewBox="0 0 1 1" preserveAspectRatio="none" aria-hidden="true" hidden={!vis}>
         <path className="cu-ext" d={ov ? ov.ext : ''} />

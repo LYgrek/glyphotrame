@@ -4,6 +4,7 @@ import * as E from '../engine/index.js';
 import { settings, session, toast } from './index.js';
 import * as R from './renderer.js';
 import { chooseImage, saveFile } from '../platform/files.js';
+import { gpuRenderBlob } from '../gpu/index.js';
 
 const get = () => settings.get();
 const set = (p) => settings.set(p);
@@ -114,7 +115,12 @@ function reportSave(r) {
 export async function exportRaster(type) {
   const g = R.getGrid(), src = R.getSource();
   if (!g) return;
-  const blob = await E.renderBlob(g, get(), src, type);
+  // carte graphique (par tuiles, rapide en grand format), sinon canvas 2D comme la référence
+  let blob = null;
+  if (session.get().rendu === 'gpu') {
+    try { blob = await gpuRenderBlob(g, get(), src, type); } catch (e) { console.warn('Export GPU impossible :', e); }
+  }
+  if (!blob) blob = await E.renderBlob(g, get(), src, type);
   if (!blob) { toast("L'image est trop grande. Baisse la résolution d'export."); return; }
   const ext = type === 'jpeg' ? 'jpg' : 'png';
   reportSave(await saveFile(E.exportFileName(src.slug, ext), blob, ext));
