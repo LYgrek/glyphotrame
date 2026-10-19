@@ -39,6 +39,15 @@ et en fin de section, des captures d'écran de chaque section du panneau, de l'e
 
 Non couvert (fenêtres natives) : boîtes Ouvrir / Enregistrer de Windows et glisser-déposer de Tauri, à tester à la main dans `npm run tauri dev`.
 
+## Vidéo (phase 4, `docs/video.md`)
+
+- **ffmpeg / ffprobe** : sidecars téléchargés par `tools/get-ffmpeg.ps1` (builds stables BtbN, somme SHA-256 vérifiée), lancés uniquement depuis le Rust (`src-tauri/src/video.rs`). L'interface n'a aucune permission d'exécution (vérifié : `plugin:shell|spawn` refusé).
+- **Chemins reçus de l'interface** : vérifiés côté Rust (absolu, fichier existant, extension vidéo) avant d'être passés à ffmpeg : un chemin absolu ne peut pas être pris pour une option `-…` ni pour une adresse réseau.
+- **Sortie binaire des sidecars (piège)** : le plugin shell lit par défaut ligne par ligne en retirant les sauts de ligne, et `Command::output()` ajoute un saut de ligne après chaque morceau reçu, même en mode brut. Pour des pixels : `set_raw_out(true)` + `spawn()` et assembler les morceaux soi-même (fonction `lancer`). `cargo test` lance les binaires directement et ne voit pas ce piège : vérifier aussi dans la fenêtre Tauri.
+- **Image d'une vidéo** : `image_video` renvoie 8 octets d'en-tête (largeur, hauteur en u32 petit-boutiste) puis les pixels RGBA. ffmpeg applique lui-même la rotation des vidéos de téléphone ; `infos_video` rend les dimensions affichées (rotation, pixels non carrés). Réduction à la taille max avec le même arrondi que `fitImage`.
+- **Source** : `{ kind: 'video', path, meta, time }` (`src/state/video.js`) ; tout le reste de l'interface marche sur l'image courante. Changer la taille max redemande l'image au même instant (`replaceImage`, qui ne remet pas le détourage en automatique).
+- **Vérifier** : `cd src-tauri; cargo test` génère de vraies mires (paysage avec son, portrait par rotation) et contrôle infos et pixels. Dans l'application, les vidéos de test : `ffmpeg -f lavfi -i testsrc2=size=640x360:rate=30:duration=2 -f lavfi -i sine=duration=2 -c:v libx264 -pix_fmt yuv420p -c:a aac -shortest mire.mp4`.
+
 ## Projets (phase 3)
 
 Fichier `.json` (proposé : `<image>.glyphotrame.json`) : `format`, `version`, `application`, `image`, `reglages` (l'objet `settings`, même forme que `state` dans la référence). Format et lecture : `src/state/project-format.js` (fonctions pures, testées par `npm test`) ; actions : `src/state/project.js`.

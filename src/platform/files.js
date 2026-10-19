@@ -21,12 +21,33 @@ const FILTERS = {
 };
 
 export const fileName = (path) => path.split(/[\\/]/).pop();
+// vidéos : lues par ffmpeg côté Rust (src/platform/ffmpeg.js), jamais chargées en mémoire par l'interface
+export const VIDEO_EXTENSIONS = ['mp4', 'mov', 'm4v', 'webm', 'mkv', 'avi'];
+export const isVideoPath = (path) => VIDEO_EXTENSIONS.includes((path.split('.').pop() || '').toLowerCase());
 const mimeOf = (path) => MIME[(path.split('.').pop() || '').toLowerCase()] || '';
 
 // lit un fichier image depuis son chemin → { blob, name, path }
 export async function readImagePath(path) {
   const bytes = await readFile(path);
   return { blob: new Blob([bytes], { type: mimeOf(path) }), name: fileName(path), path };
+}
+
+// boîte « Ouvrir » (images et vidéos) → image { blob, name, path }, vidéo { video: true, name, path }, ou null si annulé
+export async function chooseMedia() {
+  if (!inTauri()) {
+    const f = await chooseImageInBrowser('image/*,video/*');
+    return f && f.blob.type.startsWith('video/') ? { video: true, name: f.name, path: null } : f;
+  }
+  const path = await open({
+    title: 'Ouvrir une image ou une vidéo', multiple: false, directory: false,
+    filters: [
+      { name: 'Images et vidéos', extensions: [...Object.keys(MIME), ...VIDEO_EXTENSIONS] },
+      { name: 'Images', extensions: Object.keys(MIME) },
+      { name: 'Vidéos', extensions: VIDEO_EXTENSIONS }
+    ]
+  });
+  if (!path) return null;
+  return isVideoPath(path) ? { video: true, name: fileName(path), path } : readImagePath(path);
 }
 
 // boîte « Ouvrir une image » → { blob, name, path } ou null si annulé
@@ -38,10 +59,10 @@ export async function chooseImage() {
   });
   return path ? readImagePath(path) : null;
 }
-function chooseImageInBrowser() {
+function chooseImageInBrowser(accept = 'image/*') {
   return new Promise((resolve) => {
     const input = document.createElement('input');
-    input.type = 'file'; input.accept = 'image/*';
+    input.type = 'file'; input.accept = accept;
     input.addEventListener('change', () => { const f = input.files[0]; resolve(f ? { blob: f, name: f.name } : null); });
     input.addEventListener('cancel', () => resolve(null));
     input.click();
@@ -132,7 +153,9 @@ export function onFileDrop({ enter, leave, drop }) {
       else if (p.type === 'drop') {
         leave();
         if (!p.paths || !p.paths.length) return;
-        try { drop(await readImagePath(p.paths[0])); }
+        const path = p.paths[0];
+        if (isVideoPath(path)) { drop({ video: true, name: fileName(path), path }); return; }
+        try { drop(await readImagePath(path)); }
         catch (error) { drop(null, error); }
       }
     });
@@ -146,7 +169,7 @@ export function onFileDrop({ enter, leave, drop }) {
   const onDrop = (e) => {
     e.preventDefault(); depth = 0; leave();
     const f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
-    if (f) drop({ blob: f, name: f.name });
+    if (f) drop(f.type.startsWith('video/') ? { video: true, name: f.name, path: null } : { blob: f, name: f.name });
   };
   window.addEventListener('dragenter', onEnter);
   window.addEventListener('dragleave', onLeave);

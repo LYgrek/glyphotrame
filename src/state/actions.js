@@ -3,7 +3,8 @@
 import * as E from '../engine/index.js';
 import { settings, session, toast } from './index.js';
 import * as R from './renderer.js';
-import { chooseImage, saveFile } from '../platform/files.js';
+import { chooseMedia, saveFile } from '../platform/files.js';
+import { loadVideo } from './video.js';
 import { gpuRenderBlob } from '../gpu/index.js';
 
 const get = () => settings.get();
@@ -22,8 +23,10 @@ export async function loadImage(file, { quiet = false, maxDim } = {}) {
     return true;
   } catch (e) { toast(e.message); return false; }
 }
+// image ou vidéo (boîte Ouvrir, glisser-déposer)
+export const loadMedia = (file, opts) => (file && file.video ? loadVideo(file, opts) : loadImage(file, opts));
 export async function openImage() {
-  try { await loadImage(await chooseImage()); }
+  try { await loadMedia(await chooseMedia()); }
   catch (e) { toast('Impossible de lire ce fichier.'); }
 }
 export function loadSample() {

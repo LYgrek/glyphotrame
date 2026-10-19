@@ -25,7 +25,7 @@ export function ImageSection() {
   return (
     <section className="group">
       <h2>Image</h2>
-      <button type="button" className={'drop' + (over ? ' over' : '')} onClick={openImage}>
+      <button type="button" className={'drop' + (over ? ' over' : '')} onClick={openImage} title="Images (JPEG, PNG, WebP, GIF, SVG…) et vidéos (MP4, MOV, M4V, WebM, MKV, AVI)">
         <strong>Déposer une image ou cliquer pour choisir</strong>
         <span>JPEG, PNG, WebP, GIF, SVG · ou coller avec Ctrl+V</span>
       </button>

@@ -1,3 +1,5 @@
+mod video;
+
 use std::path::Path;
 use tauri::ipc::Response;
 use tauri_plugin_shell::ShellExt;
@@ -64,7 +66,7 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_shell::init())
-        .invoke_handler(tauri::generate_handler![lire_image, version_ffmpeg])
+        .invoke_handler(tauri::generate_handler![lire_image, version_ffmpeg, video::infos_video, video::image_video])
         .run(tauri::generate_context!())
         .expect("erreur au lancement de l'application Tauri");
 }

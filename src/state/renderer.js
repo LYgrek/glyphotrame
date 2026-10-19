@@ -87,7 +87,8 @@ async function render() {
   const st = settings.get();
   drawOut(st);
   if (canvases.orig) E.drawOrig(canvases.orig, grid, st, src);
-  session.set({ stats: { kind: grid.kind, cols: grid.cols, rows: grid.rows, count: grid.count, W: grid.W, H: grid.H, type: grid.type, cmyk: grid.cmyk, htCell: st.htCell } });
+  const video = src.kind === 'video' ? { ...src.meta, time: src.time } : null;
+  session.set({ stats: { kind: grid.kind, cols: grid.cols, rows: grid.rows, count: grid.count, W: grid.W, H: grid.H, type: grid.type, cmyk: grid.cmyk, htCell: st.htCell, video } });
   if (!res.ready && fontRetries < 4) { fontRetries++; setTimeout(schedule, 500); }
 }
 
@@ -121,6 +122,15 @@ export function setSource(canvas, name, original = null, extra = {}) {
   cutDirty = true;
   if (!settings.get().cutAuto) { silent = true; settings.set({ cutAuto: true }); silent = false; }
   session.set({ sourceName: name });
+  schedule();
+}
+
+// vidéo : nouvelle image (autre instant, autre taille max) pour la même source ; garde le nom,
+// les informations et le réglage du détourage (contrairement à une nouvelle image)
+export function replaceImage(canvas, extra = {}) {
+  if (!src) return;
+  src = E.createSource(canvas, src.name, src.original, { kind: src.kind, path: src.path, meta: src.meta, time: src.time, exemple: src.exemple, ...extra });
+  cutDirty = true;
   schedule();
 }
 

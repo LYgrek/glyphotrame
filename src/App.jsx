@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { session, toast } from './state/index.js';
 import { start } from './state/renderer.js';
-import { loadImage } from './state/actions.js';
+import { loadImage, loadMedia } from './state/actions.js';
 import { openProject, saveProject } from './state/project.js';
 import { onFileDrop } from './platform/files.js';
 import { ffmpegVersion } from './platform/ffmpeg.js';
@@ -37,7 +37,7 @@ export default function App() {
     const stopDrop = onFileDrop({
       enter: () => session.set({ dragOver: true }),
       leave: () => session.set({ dragOver: false }),
-      drop: (file, error) => { if (error) toast('Impossible de lire ce fichier.'); else loadImage(file); }
+      drop: (file, error) => { if (error) toast('Impossible de lire ce fichier.'); else loadMedia(file); }
     });
     return () => { window.removeEventListener('paste', onPaste); window.removeEventListener('keydown', onKey); stopDrop(); };
   }, []);

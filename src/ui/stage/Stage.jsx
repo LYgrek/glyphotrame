@@ -2,6 +2,7 @@ import { useRef, useState } from 'react';
 import { clamp, fmt } from '../../engine/index.js';
 import { session, useSetting, useSession, setSettings } from '../../state/index.js';
 import { pickAt } from '../../state/actions.js';
+import { formatDuration, formatFps } from '../../state/video.js';
 import { canvasRef } from '../../state/renderer.js';
 import Seg from '../controls/Seg.jsx';
 import PenToolbar from './PenToolbar.jsx';
@@ -24,6 +25,8 @@ function Stats() {
     rest = ` caractères · ${fmt(st.count)} glyphes · ${fmt(st.W)} × ${fmt(st.H)} px`;
     if (st.cols * st.rows > 250000) warn = 'grille très dense, le rendu ralentit';
   }
+  // vidéo : dimensions d'origine, durée, cadence
+  if (st.video) rest += ` · vidéo ${fmt(st.video.largeur)} × ${fmt(st.video.hauteur)} · ${formatDuration(st.video.duree)} · ${formatFps(st.video.cadence)}`;
   return (
     <div className="stats">
       <b>{strong}</b>{rest + (warn ? ' · ' : '')}{warn && <span className="warn">{warn}</span>}

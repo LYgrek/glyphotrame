@@ -3,10 +3,11 @@
 import * as E from '../engine/index.js';
 import { settings, session, toast } from './index.js';
 import * as R from './renderer.js';
-import { loadImage } from './actions.js';
+import { loadImage, loadMedia } from './actions.js';
+import { loadVideo } from './video.js';
 import { resetPenHistory } from './pen.js';
 import { serializeProject, parseProject } from './project-format.js';
-import { chooseProject, saveProjectFile, readImageAtPath, chooseImage, askYesNo, fileName } from '../platform/files.js';
+import { chooseProject, saveProjectFile, readImageAtPath, chooseMedia, askYesNo, fileName } from '../platform/files.js';
 import { dirname, relativePath, resolvePath } from '../platform/paths.js';
 
 /* ---------- Suivi des modifications ---------- */
@@ -23,6 +24,8 @@ settings.subscribe((next, prev) => {
 // description de l'image pour le fichier : chemin (absolu + relatif au projet), image intégrée, ou exemple
 function imageRecord(src, projectPath) {
   if (src.exemple) return { exemple: true, nom: src.name };
+  // vidéo (étape 1 de docs/video.md) : chemin seulement ; instant et plage viendront à l'étape 5
+  if (src.kind === 'video') return { nom: src.name, video: true, chemin: src.path, relatif: projectPath ? relativePath(dirname(projectPath), src.path) : null };
   if (src.path) return { nom: src.name, chemin: src.path, relatif: projectPath ? relativePath(dirname(projectPath), src.path) : null };
   if (src.original && typeof src.original.src === 'string' && src.original.src.startsWith('data:')) return { nom: src.name, donnees: src.original.src };
   return { nom: src.name };
@@ -51,6 +54,10 @@ async function loadProjectImage(rec, projectPath, maxDim) {
   const paths = [];
   if (rec.relatif && projectPath) paths.push(resolvePath(dirname(projectPath), rec.relatif));
   if (rec.chemin) paths.push(rec.chemin);
+  if (rec.video) {
+    for (const p of paths) if (await loadVideo({ name: rec.nom || fileName(p), path: p }, { quiet: true, maxDim, silent: true })) return true;
+    return false;
+  }
   for (const p of paths) {
     let file;
     try { file = await readImageAtPath(p); } catch { continue; }
@@ -69,7 +76,7 @@ export async function applyProject(data, projectPath = null, name = null) {
   if (!found) {
     const label = data.image.nom || 'image';
     if (await askYesNo(`L'image « ${label} » de ce projet est introuvable. Voulez-vous la rechercher ?`, { title: 'Image introuvable', ok: 'Rechercher…', cancel: 'Garder l’image actuelle' })) {
-      try { replaced = await loadImage(await chooseImage(), { quiet: true, maxDim: data.settings.srcMax }); } catch { /* annulé */ }
+      try { replaced = await loadMedia(await chooseMedia(), { quiet: true, maxDim: data.settings.srcMax }); } catch { /* annulé */ }
     }
   }
   // après le chargement de l'image (qui remet le détourage en automatique) : les réglages du projet

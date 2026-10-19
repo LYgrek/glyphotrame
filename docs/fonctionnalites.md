@@ -110,7 +110,7 @@ Vérifié par `npm run compare:gpu` (46 réglages types, GPU ↔ canvas 2D) et `
 ## Vidéo (phase 4, plan détaillé dans `docs/video.md`)
 
 - [x] Étape 0 · ffmpeg et ffprobe embarqués (sidecars), téléchargés par `tools/get-ffmpeg.ps1` (somme SHA-256 vérifiée) ; lancés uniquement depuis le Rust (commande `version_ffmpeg`, version affichée dans la console au démarrage) — *vérifié dans la fenêtre Tauri : versions renvoyées en 67 ms, exécution d'un programme depuis l'interface refusée*
-- [ ] Étape 1 · Importer une vidéo
+- [x] Étape 1 · Importer une vidéo : boîte Ouvrir (filtre images et vidéos) et glisser-déposer (mp4, mov, m4v, webm, mkv, avi), infos par ffprobe (dimensions affichées, durée, cadence, images, rotation, son, codec), première image avec l'effet, informations dans les statistiques, taille max appliquée, message clair si illisible — *vérifié par `cargo test` (mires générées par ffmpeg, dont une en portrait) et dans la fenêtre Tauri*
 - [ ] Étape 2 · Naviguer et lire la vidéo dans l'aperçu
 - [ ] Étape 3 · Rendre une image de vidéo
 - [ ] Étape 4 · Exporter la vidéo
