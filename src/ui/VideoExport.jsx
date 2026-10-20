@@ -109,6 +109,10 @@ function ExportDialog() {
   );
 }
 
+// temps moyen par image de chaque étape (mesuré pendant l'export)
+const STAGE_LABELS = { lire: 'décodage', image: 'image', calcul: 'calcul', gpu: 'GPU', pixels: 'pixels', ecrire: 'écriture' };
+const profText = (p) => 'ms par image · ' + Object.entries(STAGE_LABELS).map(([k, l]) => `${l} ${Math.round(p[k])}`).join(' · ');
+
 const clock = (s) => (s == null ? '…' : formatDuration(Math.ceil(s), 0));
 
 // Progression de l'export (en bas à droite, l'interface reste utilisable)
@@ -124,10 +128,12 @@ function ExportStatus() {
           <span>image {fmt(x.n)} / {fmt(x.total)}{x.fps ? ` · ${Math.round(x.fps * 10) / 10} i/s` : ''} · reste {clock(x.eta)}</span>
           <button className="btn small" type="button" onClick={cancelVideoExport}>Annuler</button>
         </div>
+        {x.prof && <p className="hint vprof">{profText(x.prof)}</p>}
       </>}
       {x.phase === 'done' && <>
         <div className="vrow"><b>Vidéo enregistrée</b><span>{x.name}</span></div>
         <p className="hint">{fmt(x.n)} images en {clock(x.secs)}</p>
+        {x.prof && <p className="hint vprof">{profText(x.prof)}</p>}
         <div className="vrow end">
           <button className="btn small" type="button" onClick={revealExport}>Ouvrir le dossier</button>
           <button className="btn small" type="button" onClick={closeExportStatus}>Fermer</button>

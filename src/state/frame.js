@@ -27,23 +27,29 @@ export async function createFrameRenderer(st, { width = null, opaque = false, gp
   return {
     gpu: !!r,
     get size() { return size; },
-    // image (canvas à la taille de la source) à l'instant `time` (s) → pixels RGBA W × H (tableau réutilisé)
-    render(image, time, meta = null) {
+    // image (canvas à la taille de la source) à l'instant `time` (s) → pixels RGBA W × H (tableau réutilisé) ;
+    // prof : temps cumulés { calcul, gpu, pixels } (ms), facultatif
+    render(image, time, meta = null, prof = null) {
+      const t0 = prof ? performance.now() : 0;
       let src = E.createSource(image, 'video', null, { kind: 'video', meta, time });
       src = E.applyCutout(st, src).src;
       const g = grid(src);
+      if (prof) prof.calcul += performance.now() - t0;
       if (!size) { const o = outputSize(g, width); size = W && H ? { s: o.s, W, H } : o; }
       const { s } = size;
       if (!out) out = new Uint8Array(size.W * size.H * 4);
-      if (r) return r.renderPixels(g, st, src, s, opaque, size.W, size.H, out);
+      if (r) return r.renderPixels(g, st, src, s, opaque, size.W, size.H, out, prof);
       // canvas 2D (rendu de la référence)
+      const t1 = prof ? performance.now() : 0;
       if (!c2d) c2d = E.createCanvas();
       const ctx = c2d.getContext('2d', { willReadFrequently: true });
       E.draw(ctx, g, st, src, s, opaque);
+      const t2 = prof ? performance.now() : 0;
       const w = Math.min(size.W, c2d.width), h = Math.min(size.H, c2d.height);
       const d = ctx.getImageData(0, 0, w, h).data;
       out.fill(0);
       for (let y = 0; y < h; y++) out.set(d.subarray(y * w * 4, (y + 1) * w * 4), y * size.W * 4);
+      if (prof) { prof.gpu += t2 - t1; prof.pixels += performance.now() - t2; }
       return out;
     },
     dispose() { if (r) r.dispose(true); }

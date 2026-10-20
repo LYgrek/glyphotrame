@@ -46,7 +46,7 @@ src/
     frame.js        vidéo : rendre une image avec des réglages figés (pixels RGBA) ; frame-size.js : dimensions paires
     video-export.js vidéo : export (boucle lire → rendre → écrire, progression, annulation) ; export-options.js : réglages par défaut
   platform/     Tauri : boîtes de dialogue, lecture / écriture de fichiers, glisser-déposer ; paths.js : chemins relatifs ;
-                ffmpeg.js : appels aux commandes Rust de la vidéo
+                ffmpeg.js : appels aux commandes Rust de la vidéo ; frame-channel.js (+ worker) : canal WebSocket des pixels de l'export
   engine/       moteur pur JavaScript, sans React, porté depuis la référence
     index.js        point d'entrée (réexporte tous les modules)
     util.js         outils communs, createCanvas
@@ -78,9 +78,10 @@ src/
 src-tauri/      côté Rust : plugins dialog + fs + shell, commandes (lire_image, ffmpeg), configuration de la fenêtre
   src/video.rs    vidéo : infos (ffprobe), image à un instant, sessions de lecture continue (ffmpeg, RGBA brut) ; tests sur de vraies vidéos
   src/export.rs   vidéo : export (ffmpeg décodeur → interface → ffmpeg encodeur, MP4 / ProRes / WebM / PNG / GIF, son) ; tests de la chaîne complète
+  src/canal.rs    vidéo : canal des pixels de l'export (WebSocket local minimal, 127.0.0.1 + jeton), plus rapide que l'IPC
   binaries/       ffmpeg / ffprobe (téléchargés par tools/get-ffmpeg.ps1, non versionnés)
 reference/      version HTML d'origine (ne pas modifier)
-tools/          bancs de comparaison (`npm run compare`, `compare:ui`, `compare:gpu`, `compare:video`), hors application
+tools/          bancs de comparaison (`npm run compare`, `compare:ui`, `compare:gpu`, `compare:video`) et mesure (`measure:video`), hors application
 docs/           fonctionnalités, notes
 ```
 
@@ -100,7 +101,7 @@ Principes :
 ## Règles de travail
 
 - Avancer par **petites étapes vérifiables**. Après chaque étape : lancer `npm run tauri dev`, vérifier, et comparer avec `reference/glyphotrame-reference.html`.
-- Après toute modification de `src/engine/` : `npm run compare` doit rester entièrement vert ; après toute modification de l'interface : `npm run compare:ui` (et `npm run compare:ui -- --gpu`) ; après toute modification de `src/gpu/` : `npm run compare:gpu` ; après toute modification de la vidéo (`src/state/frame.js`, `video-export.js`, `src-tauri/src/export.rs`, `video.rs`) : `npm run compare:video` (voir `docs/notes.md`).
+- Après toute modification de `src/engine/` : `npm run compare` doit rester entièrement vert ; après toute modification de l'interface : `npm run compare:ui` (et `npm run compare:ui -- --gpu`) ; après toute modification de `src/gpu/` : `npm run compare:gpu` ; après toute modification de la vidéo (`src/state/frame.js`, `video-export.js`, `src/platform/frame-channel*.js`, `src-tauri/src/export.rs`, `canal.rs`, `video.rs`) : `npm run compare:video` (voir `docs/notes.md`).
 - Cocher l'avancement dans `docs/fonctionnalites.md`.
 - Faire un commit git à chaque étape qui fonctionne, avec un message en français.
 - Textes de l'interface, messages d'erreur et commentaires en français.

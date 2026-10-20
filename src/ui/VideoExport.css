@@ -22,3 +22,4 @@
 .vexport-status.run .vrow span{white-space:normal;flex:1}
 /* au-dessus de la barre de lecture */
 body:has(.videobar) .vexport-status{bottom:calc(84px + env(safe-area-inset-bottom,0px))}
+.vexport-status .vprof{font:11px/1.4 var(--f-mono);font-variant-numeric:tabular-nums;color:var(--muted)}

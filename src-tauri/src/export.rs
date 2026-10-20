@@ -12,9 +12,11 @@ use std::collections::HashMap;
 use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
 use std::process::{Child, ChildStdin, Command as StdCommand, Stdio};
-use std::sync::atomic::{AtomicU32, Ordering};
+use crate::canal::Canal;
+use std::sync::atomic::{AtomicBool, AtomicU32, AtomicU64, Ordering};
 use std::sync::mpsc::{sync_channel, Receiver};
 use std::sync::{Arc, Mutex, OnceLock};
+use std::time::Instant;
 use tauri::ipc::{InvokeBody, Request, Response};
 use tauri_plugin_shell::ShellExt;
 
@@ -323,6 +325,64 @@ pub struct Export {
     cible: Cible,
     ecrites: AtomicU32,
     erreurs: Journal,
+    /// taille d'une image rendue (largeur × hauteur × 4)
+    taille_rendu: usize,
+    /// mesure (µs cumulées) : attente du décodeur et de l'encodeur (le reste est le transfert)
+    attente_decodeur: AtomicU64,
+    attente_encodeur: AtomicU64,
+    /// canal des pixels (canal.rs) : connexion ouverte (fermée à la fin), export terminé (fin de l'attente)
+    connexion: Mutex<Option<std::net::TcpStream>>,
+    termine: AtomicBool,
+}
+
+impl Export {
+    /// image décodée suivante ; None à la fin
+    fn lire_decodee(&self) -> Option<Vec<u8>> {
+        let t = Instant::now();
+        let image = self.images.lock().unwrap().recv().ok();
+        self.attente_decodeur.fetch_add(t.elapsed().as_micros() as u64, Ordering::Relaxed);
+        image
+    }
+    /// image rendue → encodeur
+    fn ecrire_rendue(&self, pixels: &[u8]) -> Result<(), String> {
+        if pixels.len() != self.taille_rendu {
+            return Err("Image rendue de taille inattendue.".into());
+        }
+        let mut entree = self.entree.lock().unwrap();
+        let flux = entree.as_mut().ok_or("Export terminé.")?;
+        let t = Instant::now();
+        if flux.write_all(pixels).is_err() {
+            return Err(message_erreur(self));
+        }
+        self.attente_encodeur.fetch_add(t.elapsed().as_micros() as u64, Ordering::Relaxed);
+        self.ecrites.fetch_add(1, Ordering::Relaxed);
+        Ok(())
+    }
+    /// fin de l'export : le canal n'attend plus de connexion, la connexion ouverte est fermée
+    fn fermer_canal(&self) {
+        self.termine.store(true, Ordering::Relaxed);
+        if let Some(c) = self.connexion.lock().unwrap().take() {
+            let _ = c.shutdown(std::net::Shutdown::Both);
+        }
+    }
+}
+
+/// Canal des pixels : attend la connexion de l'interface, puis échange les images par le WebSocket local.
+fn relier(canal: Canal, e: Arc<Export>) {
+    let Ok(flux) = canal.accepter(std::time::Duration::from_secs(30), || e.termine.load(Ordering::Relaxed)) else { return };
+    if let Ok(copie) = flux.try_clone() {
+        *e.connexion.lock().unwrap() = Some(copie);
+    }
+    let source = e.clone();
+    let _ = crate::canal::servir(flux, e.taille_rendu, move || source.lire_decodee(), |px| e.ecrire_rendue(px).map_err(std::io::Error::other));
+    // échange terminé (fin, ou erreur de l'encodeur) : export_fin n'attend plus d'images par ce canal
+    e.connexion.lock().unwrap().take();
+}
+
+#[derive(Serialize)]
+pub struct InfosCanal {
+    port: u16,
+    jeton: String,
 }
 
 #[derive(Default)]
@@ -344,12 +404,19 @@ pub struct DebutExport {
     debut: f64,
     son: bool,
     transparent: bool,
+    /// canal des pixels (WebSocket local) ; absent s'il n'a pas pu s'ouvrir (l'interface passe alors par l'IPC)
+    canal: Option<InfosCanal>,
 }
 
 #[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct FinExport {
     chemin: String,
     images: u32,
+    /// temps total (ms) passé à attendre le décodeur et l'encodeur (le reste du temps de lecture /
+    /// écriture mesuré par l'interface est le transfert entre l'interface et le Rust)
+    attente_decodeur: f64,
+    attente_encodeur: f64,
 }
 
 fn sidecar(app: &tauri::AppHandle, args: Vec<String>) -> Result<StdCommand, String> {
@@ -423,9 +490,21 @@ pub async fn export_debut(app: tauri::AppHandle, cache: tauri::State<'_, CacheIn
         cible,
         ecrites: AtomicU32::new(0),
         erreurs,
+        taille_rendu: reglages.largeur as usize * reglages.hauteur as usize * 4,
+        attente_decodeur: AtomicU64::new(0),
+        attente_encodeur: AtomicU64::new(0),
+        connexion: Mutex::new(None),
+        termine: AtomicBool::new(false),
     };
-    exports.sessions.lock().unwrap().insert(id, Arc::new(e));
+    let e = Arc::new(e);
+    exports.sessions.lock().unwrap().insert(id, e.clone());
+    let canal = crate::canal::ouvrir().ok().map(|c| {
+        let infos = InfosCanal { port: c.port, jeton: c.jeton.clone() };
+        std::thread::spawn(move || relier(c, e));
+        infos
+    });
     Ok(DebutExport {
+        canal,
         id,
         largeur: plan.source_l,
         hauteur: plan.source_h,
@@ -441,9 +520,7 @@ pub async fn export_debut(app: tauri::AppHandle, cache: tauri::State<'_, CacheIn
 #[tauri::command]
 pub async fn export_lire_image(exports: tauri::State<'_, Exports>, id: u32) -> Result<Response, String> {
     let e = session(&exports, id)?;
-    let image = tauri::async_runtime::spawn_blocking(move || e.images.lock().unwrap().recv().ok())
-        .await
-        .map_err(|e| e.to_string())?;
+    let image = tauri::async_runtime::spawn_blocking(move || e.lire_decodee()).await.map_err(|e| e.to_string())?;
     Ok(Response::new(image.unwrap_or_default()))
 }
 
@@ -454,24 +531,23 @@ pub async fn export_ecrire_image(exports: tauri::State<'_, Exports>, request: Re
     let InvokeBody::Raw(pixels) = request.body() else { return Err("Image attendue en binaire.".into()) };
     let pixels = pixels.clone();
     let e = session(&exports, id)?;
-    tauri::async_runtime::spawn_blocking(move || {
-        let mut entree = e.entree.lock().unwrap();
-        let flux = entree.as_mut().ok_or("Export terminé.")?;
-        if flux.write_all(&pixels).is_err() {
-            return Err(message_erreur(&e));
-        }
-        e.ecrites.fetch_add(1, Ordering::Relaxed);
-        Ok(())
-    })
-    .await
-    .map_err(|e| e.to_string())?
+    tauri::async_runtime::spawn_blocking(move || e.ecrire_rendue(&pixels)).await.map_err(|e| e.to_string())?
 }
 
 /// Termine l'export : fin du flux d'images, attente de l'encodeur. En cas d'échec, le fichier est supprimé.
+/// images : nombre d'images envoyées par l'interface ; par le canal, elles peuvent être encore en route :
+/// on attend qu'elles soient toutes écrites avant de fermer l'entrée de l'encodeur.
 #[tauri::command]
-pub async fn export_fin(exports: tauri::State<'_, Exports>, id: u32) -> Result<FinExport, String> {
+pub async fn export_fin(exports: tauri::State<'_, Exports>, id: u32, images: Option<u32>) -> Result<FinExport, String> {
     let e = exports.sessions.lock().unwrap().remove(&id).ok_or("Export terminé.")?;
     tauri::async_runtime::spawn_blocking(move || {
+        if let Some(n) = images {
+            let t = Instant::now();
+            while e.ecrites.load(Ordering::Relaxed) < n && e.connexion.lock().unwrap().is_some() && t.elapsed().as_secs() < 60 {
+                std::thread::sleep(std::time::Duration::from_millis(2));
+            }
+        }
+        e.fermer_canal();
         drop(e.entree.lock().unwrap().take());
         let mut p = e.processus.lock().unwrap();
         let fin = p.1.wait();
@@ -486,17 +562,21 @@ pub async fn export_fin(exports: tauri::State<'_, Exports>, id: u32) -> Result<F
             Cible::Fichier(p) => p.to_string_lossy().into_owned(),
             Cible::Sequence { dossier, prefixe } => dossier.join(format!("{prefixe}_00001.png")).to_string_lossy().into_owned(),
         };
-        Ok(FinExport { chemin, images: ecrites })
+        let ms = |a: &AtomicU64| a.load(Ordering::Relaxed) as f64 / 1000.0;
+        Ok(FinExport { chemin, images: ecrites, attente_decodeur: ms(&e.attente_decodeur), attente_encodeur: ms(&e.attente_encodeur) })
     })
     .await
     .map_err(|e| e.to_string())?
 }
 
 /// Annule l'export : processus arrêtés, fichier (ou images) incomplet supprimé.
+/// → dernier message d'erreur de ffmpeg (utile si le canal s'est fermé sur une erreur de l'encodeur)
 #[tauri::command]
-pub async fn export_annuler(exports: tauri::State<'_, Exports>, id: u32) -> Result<(), String> {
-    let Some(e) = exports.sessions.lock().unwrap().remove(&id) else { return Ok(()) };
+pub async fn export_annuler(exports: tauri::State<'_, Exports>, id: u32) -> Result<Option<String>, String> {
+    let Some(e) = exports.sessions.lock().unwrap().remove(&id) else { return Ok(None) };
     tauri::async_runtime::spawn_blocking(move || {
+        e.fermer_canal();
+        let message = if e.erreurs.lock().unwrap().trim().is_empty() { None } else { Some(message_erreur(&e)) };
         {
             let mut p = e.processus.lock().unwrap();
             let _ = p.0.kill();
@@ -506,6 +586,7 @@ pub async fn export_annuler(exports: tauri::State<'_, Exports>, id: u32) -> Resu
         }
         drop(e.entree.lock().unwrap().take());
         e.cible.supprimer(e.ecrites.load(Ordering::Relaxed));
+        message
     })
     .await
     .map_err(|e| e.to_string())

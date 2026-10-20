@@ -1,3 +1,4 @@
+mod canal;
 mod export;
 mod video;
 

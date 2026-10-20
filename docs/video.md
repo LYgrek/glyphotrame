@@ -66,7 +66,7 @@ Avancer étape par étape, avec un commit par étape qui fonctionne. Les bancs `
 
 - Le fichier projet enregistre la vidéo (chemin absolu + relatif, comme les images), l'instant courant, les points d'entrée / sortie et les derniers réglages d'export vidéo. Augmenter la version du format ; les anciens projets s'ouvrent toujours. Tests dans `npm test`.
 
-## Étape 6 · Performances (si besoin)
+## Étape 6 · Performances (si besoin) — fait, voir docs/notes.md (canal WebSocket local, ≈ 3,7 fois plus rapide en 1080p)
 
 - Mesurer le temps par image (décodage, `compute`, rendu GPU, lecture des pixels, écriture). Afficher la moyenne pendant l'export.
 - Si `compute` domine : le déplacer dans un Web Worker (OffscreenCanvas) et préparer l'image suivante pendant que la carte graphique dessine la courante.

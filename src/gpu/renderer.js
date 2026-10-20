@@ -113,11 +113,14 @@ export class GpuRenderer {
 
   // rendu complet à l'échelle s, par tuiles (avec marges pour la lueur et l'aberration) ;
   // put(tuile, x, y, l, h) reçoit les pixels RGBA non prémultipliés, ligne du haut en premier
-  tiles(g, state, src, s, opaque, put) {
+  // prof (export vidéo) : { gpu, pixels } en ms, temps du dessin (jusqu'à sa fin) et de la lecture des pixels
+  tiles(g, state, src, s, opaque, put, prof = null) {
     const W = Math.max(1, Math.round(g.W * s)), H = Math.max(1, Math.round(g.H * s));
     const margin = Math.ceil((state.fxChroma > 0 ? state.fxChroma * s : 0) + (state.fxGlow > 0 ? 3 * state.fxGlowR * s + 8 : 0)) + 2;
     const { gl } = this;
+    const one = prof ? new Uint8Array(4) : null;
     for (let ty = 0; ty < H; ty += TILE) for (let tx = 0; tx < W; tx += TILE) {
+      const t0 = prof ? performance.now() : 0;
       const core = { x: tx, y: ty, w: Math.min(TILE, W - tx), h: Math.min(TILE, H - ty) };
       const rx = Math.max(0, tx - margin), ry = Math.max(0, ty - margin);
       const rw = Math.min(W, tx + core.w + margin) - rx, rh = Math.min(H, ty + core.h + margin) - ry;
@@ -126,11 +129,15 @@ export class GpuRenderer {
       this.region(job, t, core, true);
       const px = new Uint8Array(core.w * core.h * 4);
       gl.bindFramebuffer(gl.FRAMEBUFFER, t.fbo);
+      // mesure : lire un seul pixel attend la fin du dessin, la lecture complète ne mesure plus que le transfert
+      let t1 = 0;
+      if (prof) { gl.readPixels(0, 0, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, one); t1 = performance.now(); prof.gpu += t1 - t0; }
       gl.readPixels(0, 0, core.w, core.h, gl.RGBA, gl.UNSIGNED_BYTE, px);
       // lignes de bas en haut → image de haut en bas
       const img = new Uint8ClampedArray(core.w * core.h * 4), row = core.w * 4;
       for (let y = 0; y < core.h; y++) img.set(px.subarray((core.h - 1 - y) * row, (core.h - y) * row), y * row);
       put(img, tx, ty, core.w, core.h);
+      if (prof) prof.pixels += performance.now() - t1;
     }
     return { W, H };
   }
@@ -145,13 +152,14 @@ export class GpuRenderer {
 
   // vidéo : pixels RGBA (non prémultipliés) de l'image rendue à l'échelle s, recadrée à W × H
   // depuis le coin haut gauche (dimensions paires pour le H.264) ; out : tableau réutilisé
-  renderPixels(g, state, src, s, opaque, W, H, out = new Uint8Array(W * H * 4)) {
+  // prof : temps cumulés { gpu, pixels } (ms), facultatif
+  renderPixels(g, state, src, s, opaque, W, H, out = new Uint8Array(W * H * 4), prof = null) {
     out.fill(0);
     this.tiles(g, state, src, s, opaque, (img, x, y, w, h) => {
       const cw = Math.min(w, W - x);
       if (cw <= 0) return;
       for (let r = 0; r < h && y + r < H; r++) out.set(img.subarray(r * w * 4, (r * w + cw) * 4), ((y + r) * W + x) * 4);
-    });
+    }, prof);
     return out;
   }
 

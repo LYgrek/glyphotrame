@@ -7,45 +7,17 @@
    3. Exports MP4 / MOV / WebM / GIF contrôlés par ffprobe : durée, cadence, nombre d'images, dimensions,
       son, canal alpha (ProRes 4444 et WebM, avec des pixels réellement transparents).
    4. Projet vidéo : enregistré puis rouvert avec la vraie vidéo, à la même image.
+   Les pixels passent par le canal WebSocket local (src-tauri/src/canal.rs), vérifié lui aussi.
 
    Usage : npm run compare:video          (≈ 2 min ; compile d'abord le Rust si besoin)
            $env:KEEP="1"; npm run compare:video   garde le dossier de travail (images, vidéos)
    Prérequis : ffmpeg dans src-tauri/binaries (tools/get-ffmpeg.ps1), port 1420 libre (fermer « npm run tauri dev »). */
-import { spawn, spawnSync } from 'node:child_process';
 import { existsSync, mkdirSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { fileURLToPath } from 'node:url';
-import { createServer } from 'vite';
-import { connectPage, sleep } from './lib/cdp.mjs';
+import { decode, makeTestVideo, probe, ratio, startApp } from './lib/tauri-app.mjs';
 
-const ROOT = fileURLToPath(new URL('..', import.meta.url));
-const TAURI = join(ROOT, 'src-tauri');
-const BIN = join(TAURI, 'binaries');
-const sidecar = (name) => { const f = existsSync(BIN) && readdirSync(BIN).find((x) => x.startsWith(name + '-') && !x.endsWith('.txt')); return f ? join(BIN, f) : null; };
-const FFMPEG = sidecar('ffmpeg'), FFPROBE = sidecar('ffprobe');
-if (!FFMPEG || !FFPROBE) { console.error('ffmpeg / ffprobe absents de src-tauri/binaries : lance d\'abord tools/get-ffmpeg.ps1.'); process.exit(1); }
-const EXE = join(TAURI, 'target', 'debug', process.platform === 'win32' ? 'glyphotrame-app.exe' : 'glyphotrame-app');
-const DEBUG_PORT = 9340;
 const FPS = 30, SECONDS = 2, FRAMES = FPS * SECONDS;
-
-const run = (exe, args, opts = {}) => {
-  const r = spawnSync(exe, args, { maxBuffer: 1 << 30, ...opts });
-  if (r.status !== 0) throw new Error(`${exe.split(/[\\/]/).pop()} ${args.join(' ')}\n${String(r.stderr || '').slice(-2000)}`);
-  return r.stdout;
-};
-const probe = (file) => JSON.parse(run(FFPROBE, ['-v', 'error', '-count_frames', '-show_entries',
-  'stream=codec_type,codec_name,width,height,r_frame_rate,avg_frame_rate,pix_fmt,nb_read_frames,duration:stream_tags=alpha_mode,DURATION:format=duration', '-of', 'json', file]).toString());
-// images d'un fichier ou d'une séquence (motif %05d) → { w, h, frames: [Buffer RGBA] }
-function decode(input, { vp9 = false } = {}) {
-  const first = input.includes('%') ? input.replace('%05d', '00001') : input;
-  const s = probe(first).streams.find((x) => x.codec_type === 'video');
-  const raw = run(FFMPEG, ['-v', 'error', ...(vp9 ? ['-c:v', 'libvpx-vp9'] : []), '-i', input, '-f', 'rawvideo', '-pix_fmt', 'rgba', 'pipe:1']);
-  const size = s.width * s.height * 4, frames = [];
-  for (let o = 0; o + size <= raw.length; o += size) frames.push(raw.subarray(o, o + size));
-  return { w: s.width, h: s.height, frames };
-}
-const ratio = (r) => { const [a, b] = String(r).split('/').map(Number); return b ? a / b : a; };
 
 let total = 0, ko = 0;
 const check = (name, ok, detail = '') => { total++; if (!ok) ko++; console.log(`  ${ok ? '✓' : '✗'} ${name}${detail ? ' : ' + detail : ''}`); return ok; };
@@ -54,35 +26,12 @@ const check = (name, ok, detail = '') => { total++; if (!ok) ko++; console.log(`
 const work = mkdtempSync(join(tmpdir(), 'glyphotrame-video-'));
 const MIRE = join(work, 'mire.mp4');
 console.log('Mire de test (ffmpeg testsrc2 + son)…');
-run(FFMPEG, ['-v', 'error', '-f', 'lavfi', '-i', `testsrc2=size=640x360:rate=${FPS}:duration=${SECONDS}`, '-f', 'lavfi', '-i', `sine=frequency=440:duration=${SECONDS}`,
-  '-c:v', 'libx264', '-pix_fmt', 'yuv420p', '-c:a', 'aac', '-shortest', MIRE]);
+makeTestVideo(MIRE, { width: 640, height: 360, fps: FPS, seconds: SECONDS });
 
-console.log('Compilation du Rust (cargo build)…');
-const cargo = spawnSync('cargo', ['build'], { cwd: TAURI, stdio: ['ignore', 'ignore', 'inherit'], shell: process.platform === 'win32' });
-if (cargo.status !== 0) { console.error('cargo build a échoué.'); process.exit(1); }
-
-let vite = null, app = null, page = null;
+let app = null;
 try {
-  // Vite sur le port attendu par la fenêtre Tauri (devUrl)
-  try {
-    vite = await createServer({ root: ROOT, configFile: join(ROOT, 'vite.config.js'), server: { hmr: false }, logLevel: 'error' });
-    await vite.listen();
-  } catch (e) { throw new Error('Port 1420 occupé : ferme « npm run tauri dev » avant de lancer ce banc. (' + e.message + ')'); }
-  app = spawn(EXE, [], { env: { ...process.env, WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS: `--remote-debugging-port=${DEBUG_PORT}` }, stdio: 'ignore' });
-  page = await connectPage(DEBUG_PORT, 'http://localhost:1420', { timeout: 60000 });
-  const ev = (js) => page.eval(js);
-  for (let i = 0; i < 150 && !(await ev("(async () => { try { return !!(await import('/src/state/renderer.js')).getGrid(); } catch { return false; } })()").catch(() => false)); i++) await sleep(200);
-
-  // modules de l'application, et compteur de rendus (pour attendre la fin des rendus)
-  const M = `const R = await import('/src/state/renderer.js'), I = await import('/src/state/index.js'), V = await import('/src/state/video.js'),
-    F = await import('/src/platform/ffmpeg.js'), A = await import('/src/state/actions.js'), X = await import('/src/state/video-export.js'),
-    D = await import('/src/state/defaults.js'), P = await import('/src/state/project.js'), PF = await import('/src/state/project-format.js');`;
-  const inPage = (body) => ev(`(async () => { ${M} ${body} })()`);
-  await inPage(`window.__renders = 0; I.session.subscribe((n, p) => { if (n.stats !== p.stats) window.__renders++; });`);
-  const settle = async () => {
-    let last = -1;
-    for (let i = 0; i < 50; i++) { await sleep(150); const n = await ev('window.__renders'); if (n === last) return; last = n; }
-  };
+  app = await startApp();
+  const { inPage, settle } = app;
   check('Fenêtre Tauri pilotée, rendu ' + (await inPage('return I.session.get().rendu;')), true);
 
   await inPage(`return V.loadVideo({ name: 'mire.mp4', path: ${JSON.stringify(MIRE)} });`);
@@ -103,7 +52,7 @@ try {
     return btoa(s);`);
   const applySettings = async (patch) => { await inPage(`I.settings.set({ ...D.defaultSettings(), width: 640, scale: 1, ...${JSON.stringify(patch)} });`); await settle(); };
   // export vidéo lancé comme par le bouton « Exporter… » de la fenêtre, destination imposée → état final
-  const exportVideo = (o, dest) => inPage(`await X.exportVideo(${JSON.stringify(o)}, ${JSON.stringify(dest)}); return { ...I.session.get().vExport, size: X.exportSize(${JSON.stringify(o)}) };`);
+  const exportVideo = (o, dest, opts = {}) => inPage(`await X.exportVideo(${JSON.stringify(o)}, ${JSON.stringify(dest)}, ${JSON.stringify(opts)}); return { ...I.session.get().vExport, size: X.exportSize(${JSON.stringify(o)}) };`);
   const PNG_OPTS = { format: 'png', taille: 'sortie', cadence: 0, plage: 'tout', son: false, qualite: 'haute' };
 
   /* ---------- Séquences PNG ↔ export PNG de l'application ---------- */
@@ -128,6 +77,7 @@ try {
     const t0 = Date.now();
     const res = await exportVideo(PNG_OPTS, dir);
     const secs = (Date.now() - t0) / 1000;
+    if (si === 0) check('Pixels transférés par le canal WebSocket (pas l\'IPC de secours)', res.prof && res.prof.canal === 'websocket', res.prof && res.prof.canal);
     if (!check('Séquence PNG exportée', res.phase === 'done' && res.n === FRAMES, `${res.phase} · ${res.n ?? '?'} images en ${secs.toFixed(1)} s${res.msg ? ' · ' + res.msg : ''}`)) continue;
     for (let n = 0; n < FRAMES; n++) writeFileSync(join(refDir, `ref_${String(n + 1).padStart(5, '0')}.png`), Buffer.from(await showFrame(n, true), 'base64'));
     const seqName = readdirSync(dir).filter((f) => f.endsWith('.png')).sort()[0].replace(/\d{5}\.png$/, '%05d.png');
@@ -158,6 +108,14 @@ try {
     check(`${a.frames.length} images identiques au pixel près à l'export PNG`, a.frames.length === FRAMES && b.frames.length === FRAMES && !bad,
       bad ? `${bad} image(s) différente(s), première : ${firstBad}, écart max ${maxDiff}`
         : translucent ? `${translucent.toLocaleString('fr-FR')} composantes semi-transparentes plus précises que le PNG (mêmes valeurs prémultipliées)` : '');
+    // secours par l'IPC (canal WebSocket indisponible) : même séquence, octet pour octet
+    if (si === 0) {
+      const ipcDir = join(work, 'seq-ipc');
+      mkdirSync(ipcDir);
+      const r2 = await exportVideo(PNG_OPTS, ipcDir, { canal: false });
+      const c = r2.phase === 'done' ? decode(join(ipcDir, seqName)) : { frames: [] };
+      check('Secours par l\'IPC : séquence identique', r2.prof && r2.prof.canal === 'ipc' && c.frames.length === FRAMES && c.frames.every((f, k) => f.equals(a.frames[k])), `${r2.phase} · ${r2.prof && r2.prof.canal}`);
+    }
     // le motif doit bouger (chaque image est bien celle de son instant)
     check('Images successives différentes (la vidéo avance)', !a.frames[0].equals(a.frames[FRAMES - 1]));
   }
@@ -220,15 +178,13 @@ try {
   check('Rouvert à l\'image 37, même plage', (await inPage('const s = I.session.get(); return JSON.stringify([s.vTime, s.vIn, s.vOut, R.getSource().raw.width]);')) === before, before);
   check('Image de la vidéo identique à celle de la navigation', (await shot()) === imgBefore);
 
-  const errs = page.logs.filter((l) => !/Réglages ignorés/.test(l));
+  const errs = app.logs.filter((l) => !/Réglages ignorés/.test(l));
   console.log(`\n${total - ko}/${total} vérifications réussies` + (errs.length ? `\nConsole :\n${errs.join('\n')}` : ' · console sans erreur'));
 } catch (e) {
   ko++;
   console.error('\n✗ ' + (e && e.stack || e));
 } finally {
-  if (page) await page.close().catch(() => {});
-  if (app) { app.kill(); await sleep(500); }
-  if (vite) await vite.close();
+  if (app) await app.close();
   if (process.env.KEEP) console.log('Dossier de travail : ' + work);
   else try { rmSync(work, { recursive: true, force: true }); } catch { /* fichiers encore ouverts */ }
 }

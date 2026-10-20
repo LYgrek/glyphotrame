@@ -9,6 +9,7 @@ import * as R from './renderer.js';
 import { pause, frameCount, rangeFrames } from './video.js';
 import { createFrameRenderer, outputSize, pixelsToCanvas } from './frame.js';
 import { chooseVideoDestination, revealFile, inTauri } from '../platform/files.js';
+import { openFrameChannel } from '../platform/frame-channel.js';
 import { dirname, resolvePath } from '../platform/paths.js';
 
 // formats proposés : extension, transparence, son
@@ -40,10 +41,24 @@ export const cancelVideoExport = () => { cancelRequested = true; };
 export const closeExportStatus = () => session.set({ vExport: null });
 export const revealExport = () => { const e = session.get().vExport; if (e && e.path) revealFile(e.path).catch((err) => toast(String(err))); };
 
+/* ---------- Mesure du temps par image (docs/video.md, étape 6) ----------
+   lire : attente de l'image décodée · image : pixels → canvas · calcul : détourage + grille ·
+   gpu : dessin (jusqu'à sa fin) · pixels : lecture des pixels rendus · ecrire : envoi à l'encodeur */
+export const PROFILE_STAGES = ['lire', 'image', 'calcul', 'gpu', 'pixels', 'ecrire'];
+const newProfile = () => Object.fromEntries(PROFILE_STAGES.map((k) => [k, 0]));
+// moyennes par image (ms), et temps total réel par image
+function averages(prof, n, elapsed) {
+  const a = {};
+  for (const k of PROFILE_STAGES) a[k] = n ? prof[k] / n : 0;
+  a.total = n ? elapsed / n : 0;
+  return a;
+}
+
 const errText = (e) => (typeof e === 'string' ? e : e && e.message) || String(e);
 
-// o : réglages de la fenêtre ; dest : destination déjà choisie (sinon boîte Enregistrer / dossier)
-export async function exportVideo(o, dest = null) {
+// o : réglages de la fenêtre ; dest : destination déjà choisie (sinon boîte Enregistrer / dossier) ;
+// canal : false = pixels par l'IPC seulement (vérification du secours par compare:video)
+export async function exportVideo(o, dest = null, { canal = true } = {}) {
   const src = R.getSource(), g = R.getGrid();
   if (!src || src.kind !== 'video' || !g) return;
   if (!inTauri()) { toast("L'export vidéo n'est possible que dans l'application."); return; }
@@ -63,7 +78,7 @@ export async function exportVideo(o, dest = null) {
   const [debut, images] = o.plage === 'es' ? [inF, outF - inF + 1] : [0, frameCount()];
   const outName = o.format === 'png' ? `${src.slug}-glyphotrame_00001.png…` : dest.split(/[\\/]/).pop();
 
-  let fr = null, info = null;
+  let fr = null, info = null, ch = null;
   cancelRequested = false;
   session.set({ vExport: { phase: 'run', n: 0, total: images, name: outName, eta: null, fps: 0 } });
   try {
@@ -75,31 +90,56 @@ export async function exportVideo(o, dest = null) {
         son: !!o.son, transparent: !opaque
       }
     });
+    // pixels par le canal WebSocket local (rapide, images décodées envoyées d'avance), sinon par l'IPC
+    ch = canal ? await openFrameChannel(info.canal) : null;
+    const id = info.id;
+    const read = ch ? ch.next : async () => { const b = await invoke('export_lire_image', { id }); return b.byteLength ? b : null; };
+    const write = ch ? ch.send : (px) => invoke('export_ecrire_image', px, { headers: { id: String(id) } });
     const t0 = performance.now();
     let n = 0, lastUi = 0;
+    // temps cumulés de chaque étape (ms), affichés en moyenne par image
+    const prof = newProfile();
     session.set({ vExport: { ...session.get().vExport, total: info.images } });
     for (;;) {
       if (cancelRequested) throw new Error('annulé');
-      const buf = await invoke('export_lire_image', { id: info.id });
-      if (!buf.byteLength) break;
-      const px = fr.render(pixelsToCanvas(buf, info.largeur, info.hauteur), info.debut + n / info.cadence, meta);
-      await invoke('export_ecrire_image', px, { headers: { id: String(info.id) } });
+      let t = performance.now();
+      const buf = await read();
+      if (!buf) break;
+      const t1 = performance.now();
+      prof.lire += t1 - t;
+      const image = pixelsToCanvas(buf, info.largeur, info.hauteur);
+      t = performance.now();
+      prof.image += t - t1;
+      const px = fr.render(image, info.debut + n / info.cadence, meta, prof);
+      t = performance.now();
+      await write(px);
+      prof.ecrire += performance.now() - t;
       n++;
       const now = performance.now();
       if (now - lastUi > 150 || n === info.images) {
         lastUi = now;
         const per = (now - t0) / n;
-        session.set({ vExport: { ...session.get().vExport, n, eta: (per * Math.max(0, info.images - n)) / 1000, fps: 1000 / per } });
+        session.set({ vExport: { ...session.get().vExport, n, eta: (per * Math.max(0, info.images - n)) / 1000, fps: 1000 / per, prof: averages(prof, n, now - t0) } });
       }
     }
-    const fin = await invoke('export_fin', { id: info.id });
+    // par le canal, les dernières images peuvent être encore en route : export_fin attend qu'elles soient écrites
+    const fin = await invoke('export_fin', { id: info.id, images: n });
     info = null;
-    session.set({ vExport: { phase: 'done', n: fin.images, total: fin.images, name: fin.chemin.split(/[\\/]/).pop(), path: fin.chemin, secs: (performance.now() - t0) / 1000 } });
+    const secs = (performance.now() - t0) / 1000, avg = averages(prof, n, secs * 1000);
+    // part de la lecture / écriture passée à attendre ffmpeg (mesurée côté Rust) ; le reste est le transfert
+    // (par le canal, l'écriture vers l'encodeur se fait en parallèle du rendu)
+    avg.decodeur = n ? fin.attenteDecodeur / n : 0;
+    avg.encodeur = n ? fin.attenteEncodeur / n : 0;
+    avg.canal = ch ? 'websocket' : 'ipc';
+    console.info('Export vidéo, ms par image :', JSON.stringify(avg));
+    session.set({ vExport: { phase: 'done', n: fin.images, total: fin.images, name: fin.chemin.split(/[\\/]/).pop(), path: fin.chemin, secs, prof: avg } });
   } catch (e) {
-    if (info) await invoke('export_annuler', { id: info.id }).catch(() => {});
+    // erreur de l'encodeur pendant l'échange par le canal : son message, rendu par export_annuler
+    const msg = info ? await invoke('export_annuler', { id: info.id }).catch(() => null) : null;
     if (cancelRequested) { session.set({ vExport: null }); toast('Export vidéo annulé.'); }
-    else { console.error(e); session.set({ vExport: { phase: 'error', msg: errText(e) } }); }
+    else { console.error(e); session.set({ vExport: { phase: 'error', msg: msg || errText(e) } }); }
   } finally {
+    if (ch) ch.close();
     if (fr) fr.dispose();
   }
 }
