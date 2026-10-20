@@ -476,6 +476,86 @@ try {
     for (let i = 0; i < 30 && !projFile().length; i++) await sleep(300);
     const ex = projFile()[0] ? JSON.parse(readFileSync(projFile()[0], 'utf8')) : {};
     check("Image d'exemple enregistrée comme telle", ex.image?.exemple === true && !ex.image?.donnees);
+
+    // projet vidéo : ffmpeg n'existe pas dans le navigateur, les commandes Rust de la vidéo sont simulées
+    // (mire de synthèse 640 × 360, 2 s à 30 i/s, un disque qui avance à chaque image)
+    const VID = 'C:\\Videos\\mire.mp4', PROJ = 'C:\\Projets\\mire.glyphotrame.json';
+    const MOVED_VID = 'D:\\Copie\\Videos\\mire.mp4', MOVED_PROJ = 'D:\\Copie\\Projets\\mire.glyphotrame.json';
+    const mock = (allowed) => `(() => {
+      const allowed = ${JSON.stringify(allowed)};
+      const meta = { largeur: 640, hauteur: 360, duree: 2, cadence: 30, images: 60, rotation: 0, son: true, codec: 'h264' };
+      const ok = (p) => { if (!allowed.includes(p)) throw 'Vidéo introuvable : ' + p; };
+      window.__TAURI_INTERNALS__ = { requests: [], invoke: async (cmd, a) => {
+        if (cmd === 'infos_video') { ok(a.chemin); return meta; }
+        if (cmd === 'image_video') {
+          ok(a.chemin);
+          window.__TAURI_INTERNALS__.requests.push([a.chemin, a.temps]);
+          const n = Math.floor(a.temps * 30 + 0.5 + 1e-6), s = Math.min(1, a.tailleMax / 640), w = Math.round(640 * s), h = Math.round(360 * s);
+          const c = document.createElement('canvas'); c.width = w; c.height = h;
+          const x = c.getContext('2d'), g = x.createLinearGradient(0, 0, w, h);
+          g.addColorStop(0, '#1d3b6a'); g.addColorStop(1, '#f2c14e');
+          x.fillStyle = g; x.fillRect(0, 0, w, h);
+          x.fillStyle = '#fafafa'; x.beginPath(); x.arc((0.1 + n / 75) * w, h / 2, h / 4, 0, 7); x.fill();
+          const px = x.getImageData(0, 0, w, h).data, buf = new ArrayBuffer(8 + px.length), v = new DataView(buf);
+          v.setUint32(0, w, true); v.setUint32(4, h, true); new Uint8Array(buf, 8).set(px);
+          return buf;
+        }
+        throw 'Commande non simulée : ' + cmd;
+      } };
+    })()`;
+    const S = "(async () => (await import('/src/state/index.js')).session";
+    const sessVideo = `${S}.get())().then((s) => JSON.stringify({ t: s.vTime, i: s.vIn, o: s.vOut, e: s.vExportOpts, v: !!s.video, n: s.sourceName }))`;
+    const lastRequest = "JSON.stringify(window.__TAURI_INTERNALS__.requests.at(-1))";
+    const V = "(await import('/src/state/video.js'))";
+    await app.eval(mock([VID]));
+    await app.eval(`(async () => ${V}.loadVideo({ name: 'mire.mp4', path: ${JSON.stringify(VID)} }))()`);
+    await settle(app);
+    check('Vidéo simulée ouverte', JSON.parse(await app.eval(sessVideo)).v === true);
+    for (const js of ["T.btn('Halftone', '.seg.effects button')", "T.btn('CMJN', '.seg.modes button')", "T.slider('Taille de la trame', 10)"]) await app.eval(js);
+    // entrée à l'image 12, sortie à l'image 50, tête de lecture à l'image 37, derniers réglages d'export
+    const EXPORT = { format: 'webm', taille: 'origine', cadence: 12, plage: 'es', son: false, qualite: 'moyenne' };
+    await app.eval(`(async () => { const v = ${V}; v.seekFrame(12); v.setIn(); v.seekFrame(50); v.setOut(); v.seekFrame(37); })()`);
+    await app.eval(`(async () => (await import('/src/state/index.js')).session.set({ vExportOpts: ${JSON.stringify(EXPORT)} }))()`);
+    await settle(app);
+    const vBefore = await app.eval(sessVideo), vState = await app.eval(state), vHash = await app.eval("T.hash('.pane.after canvas')");
+    const exp = { t: 37 / 30, i: 12 / 30, o: 50 / 30, e: EXPORT, v: true, n: 'mire.mp4' };
+    check('Instant, entrée, sortie et export avant enregistrement', vBefore === JSON.stringify(exp), vBefore);
+    const vText = await app.eval(`(async () => (await import('/src/state/project.js')).projectWriter()(${JSON.stringify(PROJ)}))()`);
+    const vj = JSON.parse(vText);
+    check('Format version 2', vj.version === 2);
+    check('Vidéo enregistrée par ses chemins absolu et relatif', vj.image?.video === true && vj.image.chemin === VID && vj.image.relatif === '../Videos/mire.mp4', JSON.stringify(vj.image));
+    check('Instant, entrée, sortie et export dans le fichier', JSON.stringify(vj.video) === JSON.stringify({ instant: exp.t, entree: exp.i, sortie: exp.o, export: EXPORT }), JSON.stringify(vj.video));
+    // modifications, puis réouverture du dossier copié ailleurs (seul le chemin relatif mène à la vidéo)
+    for (const js of ['T.btn("Image d\'exemple")', "T.btn('Caractères', '.seg.effects button')"]) await app.eval(js);
+    await app.eval(`${S}.set({ vExportOpts: (await import('/src/state/export-options.js')).defaultExportOptions() }))()`);
+    await settle(app);
+    await app.eval(mock([MOVED_VID]));
+    await app.eval(`(async () => { const P = await import('/src/state/project.js'), F = await import('/src/state/project-format.js');
+      await P.applyProject(F.parseProject(${JSON.stringify(vText)}), ${JSON.stringify(MOVED_PROJ)}, 'mire.glyphotrame.json'); })()`);
+    await sleep(500); await settle(app);
+    check('Vidéo retrouvée par le chemin relatif (dossier déplacé)', JSON.parse(await app.eval(lastRequest) || '[]')[0] === MOVED_VID, await app.eval(lastRequest));
+    check('Image de l\'instant demandée directement (image 37)', Math.abs(JSON.parse(await app.eval(lastRequest))[1] - 36.5 / 30) < 1e-9);
+    check('Instant, entrée, sortie et export restaurés', (await app.eval(sessVideo)) === vBefore, await app.eval(sessVideo));
+    check('Réglages restaurés à l\'identique (vidéo)', (await app.eval(state)) === vState);
+    check('Aperçu identique (vidéo)', (await app.eval("T.hash('.pane.after canvas')")) === vHash);
+    check('Projet vidéo ouvert sans modification en attente', await app.eval(sess('dirty')) === false);
+    // tête de lecture : pas une modification ; entrée / sortie : modification
+    await app.eval(`(async () => ${V}.stepFrame(1))()`); await settle(app);
+    check('Déplacer la tête de lecture ne modifie pas le projet', await app.eval(sess('dirty')) === false);
+    await app.eval(`(async () => ${V}.setIn())()`);
+    check("Déplacer l'entrée modifie le projet (•)", await app.eval(sess('dirty')) === true);
+    // projet de version 1 avec une vidéo : début de la vidéo, toute la plage, export par défaut
+    const v1 = JSON.stringify({ ...vj, version: 1, video: undefined });
+    await app.eval(mock([VID]));
+    await app.eval(`(async () => { const P = await import('/src/state/project.js'), F = await import('/src/state/project-format.js');
+      await P.applyProject(F.parseProject(${JSON.stringify(v1)}), ${JSON.stringify(PROJ)}, 'ancien.glyphotrame.json'); })()`);
+    await sleep(500); await settle(app);
+    const old = JSON.parse(await app.eval(sessVideo));
+    check('Projet vidéo de version 1 : début, toute la plage, export par défaut',
+      old.v && old.t === 0 && old.i === 0 && old.o === 2 && JSON.stringify(old.e) === JSON.stringify({ format: 'mp4', taille: 'sortie', cadence: 0, plage: 'tout', son: true, qualite: 'haute' }), JSON.stringify(old));
+    check('Réglages du projet de version 1 appliqués', (await app.eval(state)) === vState);
+    await app.eval('delete window.__TAURI_INTERNALS__');
+    await app.eval('T.btn("Image d\'exemple")'); await settle(app);
     // retour aux réglages par défaut pour la suite
     await app.eval("(async () => { const { settings } = await import('/src/state/index.js'), { defaultSettings } = await import('/src/state/defaults.js'); settings.set(defaultSettings()); })()");
   }

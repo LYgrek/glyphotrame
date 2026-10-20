@@ -7,6 +7,7 @@
 import { settings, session, toast } from './index.js';
 import * as R from './renderer.js';
 import { penActive } from './pen.js';
+import { clampVideoState } from './project-format.js';
 import { videoInfo, videoFrame, playStart, playFrame, playStop } from '../platform/ffmpeg.js';
 
 // taille des images pendant la lecture (à la pause, l'image est redemandée à la taille max complète)
@@ -14,15 +15,20 @@ const PLAY_MAX = 1280;
 const err = (e) => toast(typeof e === 'string' ? e : e.message);
 
 /* ---------- Ouvrir ---------- */
-// file = { name, path } ; silent : aucun message d'erreur (essai de plusieurs chemins à l'ouverture d'un projet)
-export async function loadVideo(file, { quiet = false, maxDim, silent = false } = {}) {
+// file = { name, path } ; silent : aucun message d'erreur (essai de plusieurs chemins à l'ouverture d'un projet) ;
+// state : { instant, entree, sortie } enregistrés dans un projet (sinon début de la vidéo, toute la plage)
+export async function loadVideo(file, { quiet = false, maxDim, silent = false, state = null } = {}) {
   if (!file) return false;
   try {
     const meta = await videoInfo(file.path);
-    const canvas = await videoFrame(file.path, 0, maxDim || settings.get().srcMax);
+    const rate = meta.cadence > 0 ? meta.cadence : 25, total = Math.max(1, meta.images || Math.round(meta.duree * rate));
+    const v = state ? clampVideoState(state, meta.duree) : { instant: 0, entree: 0, sortie: meta.duree };
+    // image de l'instant enregistré, demandée comme pendant la navigation (à l'image près)
+    const n = Math.max(0, Math.min(total - 1, Math.round(v.instant * rate)));
+    const canvas = await videoFrame(file.path, Math.max(0, (n - 0.5) / rate), maxDim || settings.get().srcMax);
     stopPlayback();
-    R.setSource(canvas, file.name, null, { kind: 'video', path: file.path, meta, time: 0 });
-    session.set({ dirty: true, vTime: 0, vIn: 0, vOut: meta.duree, vPlaying: false, vFps: 0 });
+    R.setSource(canvas, file.name, null, { kind: 'video', path: file.path, meta, time: n / rate });
+    session.set({ dirty: true, vTime: n / rate, vIn: v.entree, vOut: v.sortie, vPlaying: false, vFps: 0 });
     if (!quiet) toast(`Vidéo ouverte : ${file.name} · ${formatDuration(meta.duree)} · ${formatFps(meta.cadence)}`);
     return true;
   } catch (e) {

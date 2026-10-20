@@ -56,13 +56,15 @@ Non couvert (fenêtres natives) : boîtes Ouvrir / Enregistrer de Windows et gli
 
 ## Projets (phase 3)
 
-Fichier `.json` (proposé : `<image>.glyphotrame.json`) : `format`, `version`, `application`, `image`, `reglages` (l'objet `settings`, même forme que `state` dans la référence). Format et lecture : `src/state/project-format.js` (fonctions pures, testées par `npm test`) ; actions : `src/state/project.js`.
+Fichier `.json` (proposé : `<image>.glyphotrame.json`) : `format`, `version` (2), `application`, `image`, `video` (vidéo seulement), `reglages` (l'objet `settings`, même forme que `state` dans la référence). Format et lecture : `src/state/project-format.js` (fonctions pures, testées par `npm test`) ; actions : `src/state/project.js`.
+
+- **Vidéo (version 2)** : `image` = `{ nom, video: true, chemin, relatif }` ; `video` = `{ instant, entree, sortie, export }` (secondes ; `export` = derniers réglages de la fenêtre d'export vidéo, valeurs vérifiées une à une dans `export-options.js`). La vidéo est rouverte directement à l'image enregistrée (`loadVideo(…, { state })`, même demande `(n − ½) / cadence` que la navigation) ; les temps sont ramenés dans la durée de la vidéo (`clampVideoState`), utile si elle a été remplacée. Version 1 : pas de section `video` → début, toute la plage, export par défaut. Entrée / sortie et réglages d'export marquent le projet modifié ; la tête de lecture non (elle est enregistrée quand même).
 
 - **Image** : chemin absolu + chemin relatif au fichier du projet (un dossier « projet + images » déplacé d'un bloc se rouvre) ; image collée (sans chemin) intégrée en `data:` ; image d'exemple marquée `exemple: true`. À l'ouverture : relatif, puis absolu, puis intégrée ; sinon la recherche est proposée (ou les réglages s'appliquent à l'image actuelle).
 - **Lecture de l'image par son chemin** : commande Rust `lire_image` (`src-tauri/src/lib.rs`, testée par `cargo test`), limitée aux extensions d'images. Le plugin fs n'autorise que les fichiers choisis dans les boîtes de dialogue ; un chemin lu dans un projet n'en fait pas partie.
 - **Réglages** : fusionnés avec les valeurs par défaut (clés connues et du bon type seulement) ; un projet incomplet ou plus ancien s'ouvre, un projet d'une version plus récente est refusé avec un message.
 - **Modifié (•)** : tout changement de réglage ou d'image, sauf la couleur de fond détectée par le détourage automatique. Hors périmètre pour l'instant : avertissement à la fermeture de la fenêtre, « Nouveau projet ».
-- **Banc** : `npm run compare:ui -- Projets` enregistre (repli navigateur : téléchargement), modifie, rouvre, et vérifie réglages et aperçu identiques. Le groupe « Projet » de l'en-tête est masqué dans les captures (absent de la référence).
+- **Banc** : `npm run compare:ui -- Projets` enregistre (repli navigateur : téléchargement), modifie, rouvre, et vérifie réglages et aperçu identiques. Partie vidéo : les commandes Rust `infos_video` / `image_video` sont simulées dans la page (`window.__TAURI_INTERNALS__`, mire de synthèse 2 s à 30 i/s), le projet est rouvert depuis un dossier « déplacé » sur un autre lecteur (seul le chemin relatif mène à la vidéo), puis un projet de version 1. Le groupe « Projet » de l'en-tête est masqué dans les captures (absent de la référence).
 
 ## Rendu sur la carte graphique (phase 2)
 
