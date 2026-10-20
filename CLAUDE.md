@@ -80,7 +80,7 @@ src-tauri/      côté Rust : plugins dialog + fs + shell, commandes (lire_image
   src/export.rs   vidéo : export (ffmpeg décodeur → interface → ffmpeg encodeur, MP4 / ProRes / WebM / PNG / GIF, son) ; tests de la chaîne complète
   binaries/       ffmpeg / ffprobe (téléchargés par tools/get-ffmpeg.ps1, non versionnés)
 reference/      version HTML d'origine (ne pas modifier)
-tools/          bancs de comparaison (`npm run compare`, `compare:ui`, `compare:gpu`), hors application
+tools/          bancs de comparaison (`npm run compare`, `compare:ui`, `compare:gpu`, `compare:video`), hors application
 docs/           fonctionnalités, notes
 ```
 
@@ -100,7 +100,7 @@ Principes :
 ## Règles de travail
 
 - Avancer par **petites étapes vérifiables**. Après chaque étape : lancer `npm run tauri dev`, vérifier, et comparer avec `reference/glyphotrame-reference.html`.
-- Après toute modification de `src/engine/` : `npm run compare` doit rester entièrement vert ; après toute modification de l'interface : `npm run compare:ui` (et `npm run compare:ui -- --gpu`) ; après toute modification de `src/gpu/` : `npm run compare:gpu` (voir `docs/notes.md`).
+- Après toute modification de `src/engine/` : `npm run compare` doit rester entièrement vert ; après toute modification de l'interface : `npm run compare:ui` (et `npm run compare:ui -- --gpu`) ; après toute modification de `src/gpu/` : `npm run compare:gpu` ; après toute modification de la vidéo (`src/state/frame.js`, `video-export.js`, `src-tauri/src/export.rs`, `video.rs`) : `npm run compare:video` (voir `docs/notes.md`).
 - Cocher l'avancement dans `docs/fonctionnalites.md`.
 - Faire un commit git à chaque étape qui fonctionne, avec un message en français.
 - Textes de l'interface, messages d'erreur et commentaires en français.

@@ -121,15 +121,21 @@ function reportSave(r) {
   else if (r.status === 'cancelled') toast('Export annulé.');
   else { console.error(r.error); toast("L'export n'a pas abouti : " + (r.error && r.error.message || r.error)); }
 }
-export async function exportRaster(type) {
+// image exportée (PNG ou JPEG) de l'image affichée : carte graphique (par tuiles, rapide en grand format),
+// sinon canvas 2D comme la référence ; null si trop grande. st : réglages (actuels par défaut)
+export async function rasterBlob(type, st = get()) {
   const g = R.getGrid(), src = R.getSource();
-  if (!g) return;
-  // carte graphique (par tuiles, rapide en grand format), sinon canvas 2D comme la référence
+  if (!g) return null;
   let blob = null;
   if (session.get().rendu === 'gpu') {
-    try { blob = await gpuRenderBlob(g, get(), src, type); } catch (e) { console.warn('Export GPU impossible :', e); }
+    try { blob = await gpuRenderBlob(g, st, src, type); } catch (e) { console.warn('Export GPU impossible :', e); }
   }
-  if (!blob) blob = await E.renderBlob(g, get(), src, type);
+  return blob || E.renderBlob(g, st, src, type);
+}
+export async function exportRaster(type) {
+  const src = R.getSource();
+  if (!R.getGrid()) return;
+  const blob = await rasterBlob(type);
   if (!blob) { toast("L'image est trop grande. Baisse la résolution d'export."); return; }
   const ext = type === 'jpeg' ? 'jpg' : 'png';
   reportSave(await saveFile(E.exportFileName(src.slug, ext), blob, ext));

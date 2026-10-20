@@ -11,6 +11,7 @@
     "compare": "node tools/compare-headless.mjs",
     "compare:ui": "node tools/compare-ui.mjs",
     "compare:gpu": "node tools/compare-headless.mjs compare-gpu.html --gpu",
+    "compare:video": "node tools/compare-video.mjs",
     "test": "node --test tools/tests/*.test.mjs"
   },
   "dependencies": {
