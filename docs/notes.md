@@ -84,7 +84,7 @@ Plugins Tauri **updater** (vérifier, télécharger, installer) et **process** (
   - Export vidéo en cours : installation refusée avec un message (l'export serait coupé).
   - Téléchargement avec barre de progression (Mo reçus / total), puis installation. **Windows** : l'installateur NSIS est lancé en mode passif (`windows.installMode: "passive"`, petite fenêtre de progression, aucune question), il ferme Glyphotrame, met à jour les fichiers et relance l'application. **macOS / Linux** : `relaunch()` du plugin process.
   - Erreur (réseau coupé, signature refusée…) : message dans la fenêtre, « Réessayer » ou « Fermer ».
-- Une installation faite avec le **MSI** est mise à jour par le MSI (clé `windows-x86_64-msi` de latest.json), une installation NSIS par le `.exe` (clé `windows-x86_64`).
+- Seul l'installateur **NSIS** est diffusé et sert aux mises à jour (clé `windows-x86_64` de latest.json). Le MSI se construit encore sur ce PC (`npm run release:local`) mais n'est pas publié : une installation faite avec le MSI recevrait l'installateur NSIS.
 
 ### Clé de signature
 
@@ -98,22 +98,66 @@ Plugins Tauri **updater** (vérifier, télécharger, installer) et **process** (
   - Copier `glyphotrame.key` dans **deux endroits distincts hors de l'ordinateur** : par exemple un gestionnaire de mots de passe (Bitwarden, 1Password, KeePass : pièce jointe ou note sécurisée) et une clé USB rangée à part.
   - Garder le **mot de passe** dans le gestionnaire de mots de passe, pas dans le même fichier que la clé sur la clé USB.
   - Le contenu de la clé est une seule ligne de texte : on peut aussi l'imprimer et la ranger avec ses papiers.
-  - Pour GitHub Actions (phase 5) : secrets `TAURI_SIGNING_PRIVATE_KEY` (contenu du fichier) et `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` du dépôt, jamais dans un fichier versionné.
-- Sans la clé, `npm run tauri build` crée bien les installateurs mais s'arrête en erreur à l'étape des signatures (`createUpdaterArtifacts`) : utiliser `npm run release`.
-
-### Publier une version
-
-1. Monter la version dans `package.json`, `src-tauri/tauri.conf.json`, `src-tauri/Cargo.toml` et `APP_VERSION` (`src/state/project-format.js`) ; `npm test` vérifie qu'elles sont identiques.
-2. Écrire les notes dans `docs/versions.md`, section `## X.Y.Z` (texte simple, affiché tel quel dans la fenêtre).
-3. `npm run release` (= `tools/build-release.ps1`) : demande le mot de passe de la clé (jamais écrit sur le disque), construit les installateurs et leurs signatures (`.sig`), puis crée `src-tauri/target/release/bundle/latest.json` (`tools/latest-json.mjs`).
-4. Sur GitHub, dans `LYgrek/glyphotrame-releases` : nouvelle release avec le tag **`vX.Y.Z`** (le `v` compte : les adresses de latest.json le contiennent), joindre `Glyphotrame_X.Y.Z_x64-setup.exe`, `Glyphotrame_X.Y.Z_x64_fr-FR.msi` et `latest.json`, publier (pas en brouillon ni en préversion).
-5. Vérifier : `https://github.com/LYgrek/glyphotrame-releases/releases/latest/download/latest.json` doit renvoyer le nouveau fichier ; une copie installée de la version précédente propose la mise à jour au démarrage.
+  - GitHub Actions : la clé et son mot de passe sont aussi enregistrés comme secrets du dépôt privé (`TAURI_SIGNING_PRIVATE_KEY`, `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`, voir « Publier une version »). Un secret GitHub ne se relit pas : ce n'est **pas** une sauvegarde.
+- Sans la clé, `npm run tauri build` crée bien les installateurs mais s'arrête en erreur à l'étape des signatures (`createUpdaterArtifacts`). Sur ce PC : `npm run release:local` (`tools/build-release.ps1`, mot de passe demandé, jamais écrit sur le disque ; crée aussi `latest.json` avec `tools/latest-json.mjs`). Pour publier : voir la section suivante.
 
 ### Tester une mise à jour
 
 - Vrai parcours : installer la 1.0.0 avec le `.exe` NSIS, puis publier une 1.0.1 comme ci-dessus. Au démarrage, la 1.0.0 propose la mise à jour, la télécharge, l'installe et redémarre en 1.0.1.
 - Sans toucher au dépôt public : construire une copie d'essai dont `plugins.updater.endpoints` pointe vers un serveur local (`http://127.0.0.1:…/latest.json`, avec `"dangerousInsecureTransportProtocol": true` : sinon l'updater refuse tout ce qui n'est pas en HTTPS), puis servir le `latest.json` et l'installateur d'une version plus récente signée avec la même clé. Ne jamais publier une version construite avec cette option.
 - La fenêtre seule se vérifie dans `npm run dev` en remplissant `session.update` depuis la console : `{ phase: 'available' | 'save' | 'download' | 'error', version, notes, received, total, msg }`.
+
+## Publier une version
+
+Deux dépôts GitHub sur le compte **LYgrek** :
+- **`glyphotrame`** (privé) : le code. Un tag `vX.Y.Z` y lance le workflow `.github/workflows/publier.yml`.
+- **`glyphotrame-releases`** (public, un simple README) : uniquement les releases (installateur NSIS, sa signature `.sig`, `latest.json`). C'est là que l'application cherche ses mises à jour, et l'adresse à donner pour télécharger Glyphotrame : `https://github.com/LYgrek/glyphotrame-releases/releases/latest`.
+
+### Publier (à chaque version)
+
+```powershell
+npm run release -- patch    # corrections        1.0.0 → 1.0.1
+npm run release -- minor    # nouveautés         1.0.0 → 1.1.0
+npm run release -- major    # grands changements 1.0.0 → 2.0.0
+```
+
+`tools/release.mjs` : vérifie que tout est commité, qu'on est sur `main` et à jour avec GitHub ; demande les notes de version (une ligne par point, ligne vide pour terminer ; ajoutées dans `docs/versions.md`) ; met la version à jour partout (`package.json`, `package-lock.json`, `tauri.conf.json`, `Cargo.toml`, `Cargo.lock`, `APP_VERSION`) ; lance `npm test` ; demande confirmation ; puis commit « Version X.Y.Z », tag `vX.Y.Z` et envoi (`git push --atomic origin main vX.Y.Z`). Refus ou échec des tests : les fichiers sont remis comme avant, rien n'est envoyé.
+
+Le workflow (15 à 25 min, suivi dans l'onglet **Actions** du dépôt privé) : contrôle que le tag correspond à la version des fichiers et lit les notes (`tools/release-notes.mjs`), `npm ci`, `npm test`, télécharge ffmpeg et ffprobe (`tools/get-ffmpeg.ps1`, somme SHA-256 vérifiée), construit l'installateur NSIS avec `tauri-apps/tauri-action`, le signe, et publie la release `vX.Y.Z` « Glyphotrame X.Y.Z » dans `glyphotrame-releases` avec les notes et `latest.json` (`includeUpdaterJson`). Le tag est créé dans `glyphotrame-releases` sur sa branche `main` (`releaseCommitish`), d'où le README obligatoire.
+
+Vérifier ensuite :
+- `https://github.com/LYgrek/glyphotrame-releases/releases/latest/download/latest.json` renvoie la nouvelle version ;
+- une copie installée de la version précédente propose la mise à jour (au démarrage, ou « Rechercher les mises à jour »).
+
+### En cas d'échec
+
+- Lire le journal de l'étape en rouge dans **Actions**. Erreur passagère (réseau, téléchargement de ffmpeg) : **Re-run failed jobs**.
+- Si une release `vX.Y.Z` a été créée à moitié dans `glyphotrame-releases`, la supprimer (page de la release → Delete) ainsi que son tag (onglet Tags) avant de relancer.
+- Erreur dans le code : corriger, commiter, puis refaire un tag sur le nouveau commit : `git tag -d vX.Y.Z`, `git push origin :refs/tags/vX.Y.Z`, `git tag -a vX.Y.Z -m "Glyphotrame X.Y.Z"`, `git push origin vX.Y.Z`.
+- « Bad credentials » / « Resource not accessible » à l'étape de publication : jeton `RELEASES_TOKEN` expiré ou sans la permission Contents → en créer un nouveau (ci-dessous) et remplacer le secret.
+- Erreur de signature : secrets `TAURI_SIGNING_PRIVATE_KEY` / `…_PASSWORD` absents ou faux.
+
+### Mise en place (une seule fois)
+
+1. **Clé de signature** créée et sauvegardée (section « Mises à jour »), clé publique dans `plugins.updater.pubkey`.
+2. **Dépôt privé** : sur github.com, **+** (en haut à droite) → *New repository* → nom `glyphotrame`, *Private*, **sans** README, .gitignore ni licence → *Create repository*. Puis dans le projet : `git remote add origin https://github.com/LYgrek/glyphotrame.git` et `git push -u origin main` (Git Credential Manager ouvre le navigateur pour se connecter à GitHub la première fois).
+3. **Dépôt public** : *New repository* → nom `glyphotrame-releases`, *Public*, cocher **Add a README file** → *Create repository*.
+4. **Jeton pour publier** (fine-grained, limité au dépôt public) : photo de profil → *Settings* → *Developer settings* (tout en bas à gauche) → *Personal access tokens* → *Fine-grained tokens* → *Generate new token* :
+   - *Token name* : `glyphotrame-releases` ; *Expiration* : la plus longue proposée (noter la date : il faudra le renouveler) ;
+   - *Resource owner* : LYgrek ; *Repository access* : **Only select repositories** → `glyphotrame-releases` ;
+   - *Permissions* → *Repository permissions* → **Contents : Read and write** (*Metadata : Read-only* s'ajoute tout seul) ; rien d'autre ;
+   - *Generate token*, puis copier le jeton (`github_pat_…`) : il n'est affiché qu'une fois.
+5. **Secrets** du dépôt privé : `glyphotrame` → *Settings* → *Secrets and variables* → *Actions* → *New repository secret*, trois fois (noms exacts) :
+   - `TAURI_SIGNING_PRIVATE_KEY` : tout le contenu de la clé privée (`notepad "$env:USERPROFILE\.tauri\glyphotrame.key"`, Ctrl+A, Ctrl+C) ;
+   - `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` : son mot de passe ;
+   - `RELEASES_TOKEN` : le jeton de l'étape 4.
+
+Le workflow n'a besoin d'aucun autre réglage : `GITHUB_TOKEN` (fourni par GitHub) sert seulement au téléchargement de ffmpeg.
+
+### Plus tard
+
+- **macOS** : job `macos` commenté dans `publier.yml` (version universelle, `--target universal-apple-darwin`). À activer quand il y aura ffmpeg / ffprobe pour macOS (`src-tauri/binaries/*-universal-apple-darwin`) et un compte développeur Apple pour signer et notariser.
+- **Licence de ffmpeg** : la build téléchargée est GPL (elle contient x264). La diffuser publiquement oblige à fournir sa licence et l'accès à son code source (lien vers la build BtbN et ses sources dans le README de `glyphotrame-releases`). Autre voie : build LGPL avec l'encodeur H.264 de Windows (`h264_mf`, voir `docs/video.md`).
 
 ## Projets (phase 3)
 

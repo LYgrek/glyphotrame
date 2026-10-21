@@ -26,7 +26,8 @@ Commandes :
 - `npm install` : installer les dépendances
 - `powershell -ExecutionPolicy Bypass -File .\tools\get-ffmpeg.ps1` : télécharger ffmpeg et ffprobe dans `src-tauri/binaries/` (obligatoire avant de compiler)
 - `npm run tauri dev` : lancer l'application en mode développement
-- `npm run release` : créer les installateurs signés et `latest.json` pour les mises à jour (`src-tauri/target/release/bundle/`) ; demande le mot de passe de la clé privée, rangée hors du projet dans `%USERPROFILE%\.tauri\glyphotrame.key` (voir `docs/notes.md`, « Mises à jour »). `npm run tauri build` seul échoue à l'étape des signatures sans cette clé.
+- `npm run release -- patch|minor|major` : publier une version (version mise à jour partout, notes dans `docs/versions.md`, commit, tag `vX.Y.Z`, envoi) ; le workflow `.github/workflows/publier.yml` construit, signe et publie la release dans le dépôt public `LYgrek/glyphotrame-releases` (voir `docs/notes.md`, « Publier une version »)
+- `npm run release:local` : installateurs signés sur ce PC, sans publier (mot de passe de la clé privée `%USERPROFILE%\.tauri\glyphotrame.key`, jamais dans le projet). `npm run tauri build` seul échoue à l'étape des signatures sans cette clé.
 - `npm test` : tests unitaires (format des projets, chemins, grain animé, taille des exports vidéo) ; `cd src-tauri; cargo test` : tests Rust
 
 ## Architecture cible

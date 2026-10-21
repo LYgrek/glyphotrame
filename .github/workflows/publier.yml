@@ -1,0 +1,139 @@
+# Publier une version de Glyphotrame (docs/notes.md, « Publier une version »).
+# Déclenché par un tag vX.Y.Z (créé par « npm run release -- patch|minor|major ») :
+# construit l'application sur Windows, signe les mises à jour et publie la release
+# (installateur NSIS + signature + latest.json + notes de version) dans le dépôt PUBLIC
+# LYgrek/glyphotrame-releases, où l'updater de l'application va chercher latest.json.
+#
+# Secrets du dépôt (Settings → Secrets and variables → Actions) :
+#   TAURI_SIGNING_PRIVATE_KEY           contenu de %USERPROFILE%\.tauri\glyphotrame.key
+#   TAURI_SIGNING_PRIVATE_KEY_PASSWORD  son mot de passe
+#   RELEASES_TOKEN                      jeton fine-grained limité à glyphotrame-releases (Contents : Read and write)
+
+name: Publier une version
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: read
+
+# une seule publication à la fois
+concurrency:
+  group: publier
+  cancel-in-progress: false
+
+jobs:
+  windows:
+    name: Windows (NSIS)
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # le tag doit correspondre à la version des fichiers ; notes lues dans docs/versions.md
+      - name: Version et notes
+        id: notes
+        run: node tools/release-notes.mjs ${{ github.ref_name }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: 'src-tauri -> target'
+
+      - name: Dépendances
+        run: npm ci
+
+      - name: Tests
+        run: npm test
+
+      - name: ffmpeg et ffprobe (sidecars)
+        shell: pwsh
+        run: ./tools/get-ffmpeg.ps1
+        env:
+          # évite la limite de requêtes anonymes de l'API GitHub
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Construire, signer et publier
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.RELEASES_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        with:
+          owner: LYgrek
+          repo: glyphotrame-releases
+          tagName: ${{ github.ref_name }}
+          # le tag est créé dans glyphotrame-releases, sur sa branche main (le commit du code n'y existe pas)
+          releaseCommitish: main
+          releaseName: Glyphotrame ${{ steps.notes.outputs.version }}
+          releaseBody: ${{ steps.notes.outputs.notes }}
+          releaseDraft: false
+          prerelease: false
+          includeUpdaterJson: true
+          updaterJsonPreferNsis: true
+          args: --bundles nsis
+
+  # ---------------------------------------------------------------------------
+  # macOS (version universelle Apple Silicon + Intel) : prêt à activer plus tard.
+  # Avant de décommenter :
+  #  1. Fournir ffmpeg et ffprobe pour macOS dans src-tauri/binaries/ sous les noms
+  #     ffmpeg-universal-apple-darwin et ffprobe-universal-apple-darwin (binaires « lipo »
+  #     arm64 + x86_64), par exemple avec un script tools/get-ffmpeg.sh à écrire.
+  #  2. Signature et notarisation Apple (compte développeur) : secrets APPLE_CERTIFICATE,
+  #     APPLE_CERTIFICATE_PASSWORD, APPLE_SIGNING_IDENTITY, APPLE_ID, APPLE_PASSWORD, APPLE_TEAM_ID.
+  #  3. Vérifier l'icône icon.icns et la fenêtre sur un Mac.
+  # « needs: windows » : la release existe déjà, tauri-action y ajoute le .app.tar.gz, sa
+  # signature, le .dmg, et complète latest.json avec la plateforme darwin.
+  # ---------------------------------------------------------------------------
+  # macos:
+  #   name: macOS (universelle)
+  #   needs: windows
+  #   runs-on: macos-latest
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - name: Version et notes
+  #       id: notes
+  #       run: node tools/release-notes.mjs ${{ github.ref_name }}
+  #     - uses: actions/setup-node@v4
+  #       with:
+  #         node-version: 24
+  #         cache: npm
+  #     - uses: dtolnay/rust-toolchain@stable
+  #       with:
+  #         targets: aarch64-apple-darwin,x86_64-apple-darwin
+  #     - uses: swatinem/rust-cache@v2
+  #       with:
+  #         workspaces: 'src-tauri -> target'
+  #     - run: npm ci
+  #     - run: npm test
+  #     - name: ffmpeg et ffprobe (sidecars macOS)
+  #       run: bash tools/get-ffmpeg.sh
+  #     - name: Construire, signer et publier
+  #       uses: tauri-apps/tauri-action@v0
+  #       env:
+  #         GITHUB_TOKEN: ${{ secrets.RELEASES_TOKEN }}
+  #         TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+  #         TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+  #         APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+  #         APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+  #         APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+  #         APPLE_ID: ${{ secrets.APPLE_ID }}
+  #         APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+  #         APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+  #       with:
+  #         owner: LYgrek
+  #         repo: glyphotrame-releases
+  #         tagName: ${{ github.ref_name }}
+  #         releaseCommitish: main
+  #         releaseName: Glyphotrame ${{ steps.notes.outputs.version }}
+  #         releaseBody: ${{ steps.notes.outputs.notes }}
+  #         releaseDraft: false
+  #         prerelease: false
+  #         includeUpdaterJson: true
+  #         args: --target universal-apple-darwin

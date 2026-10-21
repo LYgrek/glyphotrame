@@ -125,6 +125,7 @@ Vérifié par `npm run compare:gpu` (46 réglages types, GPU ↔ canvas 2D) et `
 - [x] Icône définitive (point noir sur fond blanc, `src-tauri/icons/source/`) : icônes Windows / macOS générées par `npx tauri icon`, favicon `public/favicon.svg`
 - [x] Version 1.0.0 (package.json, tauri.conf.json, Cargo.toml, champ `application` des projets)
 - [x] Installateurs en français : NSIS (`.exe`, installateur principal, sans droits administrateur) et MSI (`fr-FR`), ffmpeg et ffprobe inclus
-- [x] Mises à jour automatiques (plugins updater + process, `docs/notes.md` « Mises à jour ») : recherche discrète au démarrage, fenêtre « Glyphotrame X.Y.Z est disponible » avec notes de version, « Installer maintenant » / « Plus tard », proposition d'enregistrer le projet modifié, barre de progression, installation et redémarrage ; version et « Rechercher les mises à jour » dans l'en-tête ; `npm run release` (build signé + latest.json)
+- [x] Mises à jour automatiques (plugins updater + process, `docs/notes.md` « Mises à jour ») : recherche discrète au démarrage, fenêtre « Glyphotrame X.Y.Z est disponible » avec notes de version, « Installer maintenant » / « Plus tard », proposition d'enregistrer le projet modifié, barre de progression, installation et redémarrage ; version et « Rechercher les mises à jour » dans l'en-tête 
 - [ ] Mise à jour vérifiée de bout en bout : 1.0.0 installée → 1.0.1 publiée dans `LYgrek/glyphotrame-releases` → proposée, installée, redémarrée
-- [ ] GitHub Actions (`tauri-action`) : Windows et macOS (version universelle)
+- [ ] Publication automatique : dépôt privé `glyphotrame` (code) et public `glyphotrame-releases` (installateur NSIS + latest.json), workflow `publier.yml` déclenché par un tag `v*` (ffmpeg, `tauri-action`, signature), `npm run release -- patch|minor|major`
+- [ ] Construction macOS universelle (job commenté dans `publier.yml`, ffmpeg macOS et signature Apple à prévoir)

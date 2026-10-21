@@ -34,7 +34,10 @@ if ((Test-Path $ffmpeg) -and (Test-Path $ffprobe) -and -not $Force) {
 
 # Dernière build stable (ffmpeg-n<version>-latest-win64-<licence>-<version>.zip), pas la branche de développement
 Write-Host "Recherche de la dernière build $Licence..."
-$publication = Invoke-RestMethod -UseBasicParsing -Uri 'https://api.github.com/repos/BtbN/FFmpeg-Builds/releases/latest' -Headers @{ 'User-Agent' = 'glyphotrame' }
+$entetes = @{ 'User-Agent' = 'glyphotrame' }
+# GitHub Actions : jeton du workflow, pour ne pas dépendre de la limite de requêtes anonymes de l'API
+if ($env:GITHUB_TOKEN) { $entetes['Authorization'] = "Bearer $env:GITHUB_TOKEN" }
+$publication = Invoke-RestMethod -UseBasicParsing -Uri 'https://api.github.com/repos/BtbN/FFmpeg-Builds/releases/latest' -Headers $entetes
 $motif = "^ffmpeg-n(\d+)\.(\d+)-latest-win64-$Licence-\d+\.\d+\.zip$"
 $archive = $publication.assets |
   Where-Object { $_.name -match $motif } |

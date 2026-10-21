@@ -78,13 +78,26 @@ Ouvre Claude Code dans VS Code (icône Claude dans la barre latérale, ou `Ctrl+
 
 Pour la suite (projets sauvegardés, vidéo, distribution sur Mac), les phases 3 à 5 sont décrites dans `CLAUDE.md`.
 
-## Créer l'installateur
+## Publier une nouvelle version
+
+Les versions sont construites et publiées automatiquement par GitHub. Quand une version est prête (tout est commité) :
 
 ```powershell
-npm run release
+npm run release -- patch    # petites corrections   (1.0.0 → 1.0.1)
+npm run release -- minor    # nouvelles fonctions   (1.0.0 → 1.1.0)
+npm run release -- major    # grands changements    (1.0.0 → 2.0.0)
 ```
 
-Le mot de passe de la clé de signature des mises à jour est demandé (clé rangée dans `C:\Users\<toi>\.tauri\glyphotrame.key`, voir `docs/notes.md`, « Mises à jour »). Le `.exe` d'installation (installateur principal), le `.msi`, leurs signatures `.sig` et `latest.json` se trouvent dans `src-tauri\target\release\bundle\`.
+1. Le script te demande les **notes de version** : tape un point par ligne, puis une ligne vide pour terminer. C'est le texte que verront les utilisateurs dans la fenêtre de mise à jour.
+2. Il lance les tests, te montre le résumé et demande confirmation (`o` pour publier).
+3. Il envoie tout sur GitHub. La construction prend 15 à 25 minutes : tu peux la suivre sur https://github.com/LYgrek/glyphotrame/actions (un rond jaune qui tourne, puis une coche verte).
+4. La version apparaît sur https://github.com/LYgrek/glyphotrame-releases/releases. C'est aussi l'adresse à donner pour télécharger Glyphotrame. Les applications déjà installées proposent la mise à jour à leur prochain démarrage.
+
+Si la construction échoue (croix rouge), clique dessus pour lire l'erreur, ou colle-la à Claude Code. Détails, mise en place des dépôts et des secrets : `docs/notes.md`, section « Publier une version ».
+
+**Clé de signature** : `C:\Users\<toi>\.tauri\glyphotrame.key` et son mot de passe doivent être sauvegardés hors de l'ordinateur (voir `docs/notes.md`, « Mises à jour »). Sans eux, plus aucune mise à jour possible pour les applications installées.
+
+Pour construire un installateur sur ce PC sans rien publier : `npm run release:local` (demande le mot de passe de la clé ; fichiers dans `src-tauri\target\release\bundle\`).
 
 ## Bons réflexes
 

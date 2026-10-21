@@ -1,28 +1,18 @@
-// Crée latest.json (manifeste des mises à jour, voir docs/notes.md « Mises à jour ») après un build signé :
+// Crée latest.json (manifeste des mises à jour) après un build signé fait sur ce PC (npm run release:local) :
 //   node tools/latest-json.mjs
+// Publication habituelle : le workflow GitHub Actions le crée lui-même (docs/notes.md, « Publier une version »).
 // Lit la version dans src-tauri/tauri.conf.json, les notes dans docs/versions.md (section « ## X.Y.Z »)
-// et les signatures (.sig) à côté des installateurs. Écrit src-tauri/target/release/bundle/latest.json,
-// à joindre à la release GitHub vX.Y.Z de LYgrek/glyphotrame-releases avec les installateurs.
+// et les signatures (.sig) à côté des installateurs. Écrit src-tauri/target/release/bundle/latest.json.
 import { readFileSync, writeFileSync, existsSync } from 'node:fs';
-import { join, dirname } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { join } from 'node:path';
+import { ROOT, readNotes } from './release-notes.mjs';
 
-const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const REPO = 'https://github.com/LYgrek/glyphotrame-releases';
 const conf = JSON.parse(readFileSync(join(ROOT, 'src-tauri/tauri.conf.json'), 'utf8'));
 const { version, productName } = conf;
 const bundle = join(ROOT, 'src-tauri/target/release/bundle');
 
-// notes de version : texte sous « ## X.Y.Z » jusqu'au titre suivant
-function notesFor(md, v) {
-  const lines = md.replace(/\r/g, '').split('\n');
-  const start = lines.findIndex((l) => l.trim() === `## ${v}`);
-  if (start < 0) return null;
-  const end = lines.findIndex((l, i) => i > start && /^##?\s/.test(l));
-  return lines.slice(start + 1, end < 0 ? undefined : end).join('\n').trim();
-}
-
-const notes = notesFor(readFileSync(join(ROOT, 'docs/versions.md'), 'utf8'), version);
+const notes = readNotes(version);
 if (!notes) { console.error(`Ajoute une section « ## ${version} » dans docs/versions.md.`); process.exit(1); }
 
 const files = {
