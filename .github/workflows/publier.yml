@@ -30,6 +30,23 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # secrets présents et jeton capable d'écrire dans glyphotrame-releases, avant 20 min de construction
+      - name: Secrets
+        shell: bash
+        env:
+          CLE: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          MDP: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+          JETON: ${{ secrets.RELEASES_TOKEN }}
+        run: |
+          manque=""
+          [ -n "$CLE" ] || manque="$manque TAURI_SIGNING_PRIVATE_KEY"
+          [ -n "$MDP" ] || manque="$manque TAURI_SIGNING_PRIVATE_KEY_PASSWORD"
+          [ -n "$JETON" ] || manque="$manque RELEASES_TOKEN"
+          if [ -n "$manque" ]; then echo "::error::Secrets manquants dans le dépôt glyphotrame :$manque"; exit 1; fi
+          droits=$(curl -s -H "Authorization: Bearer $JETON" https://api.github.com/repos/LYgrek/glyphotrame-releases | jq -r '.permissions.push // "absent"')
+          if [ "$droits" != "true" ]; then echo "::error::RELEASES_TOKEN ne peut pas écrire dans LYgrek/glyphotrame-releases (expiré, mauvais dépôt ou permission Contents manquante)."; exit 1; fi
+          echo "Secrets présents, jeton valide pour glyphotrame-releases."
+
       # le tag doit correspondre à la version des fichiers ; notes lues dans docs/versions.md
       - name: Version et notes
         id: notes

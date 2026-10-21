@@ -131,7 +131,7 @@ Vérifier ensuite :
 
 ### En cas d'échec
 
-- Lire le journal de l'étape en rouge dans **Actions**. Erreur passagère (réseau, téléchargement de ffmpeg) : **Re-run failed jobs**.
+- Lire le journal de l'étape en rouge dans **Actions**. La première étape, « Secrets », vérifie en quelques secondes que les trois secrets existent et que le jeton a accès à `glyphotrame-releases`. Erreur passagère (réseau, téléchargement de ffmpeg) : **Re-run failed jobs**.
 - Si une release `vX.Y.Z` a été créée à moitié dans `glyphotrame-releases`, la supprimer (page de la release → Delete) ainsi que son tag (onglet Tags) avant de relancer.
 - Erreur dans le code : corriger, commiter, puis refaire un tag sur le nouveau commit : `git tag -d vX.Y.Z`, `git push origin :refs/tags/vX.Y.Z`, `git tag -a vX.Y.Z -m "Glyphotrame X.Y.Z"`, `git push origin vX.Y.Z`.
 - « Bad credentials » / « Resource not accessible » à l'étape de publication : jeton `RELEASES_TOKEN` expiré ou sans la permission Contents → en créer un nouveau (ci-dessous) et remplacer le secret.
