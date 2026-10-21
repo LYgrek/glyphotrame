@@ -12,5 +12,5 @@ Construite avec Tauri 2, React et Vite.
 ```powershell
 npm install
 npm run tauri dev     # développement
-npm run tauri build   # installateur
+npm run release       # installateurs signés + latest.json (mises à jour, voir docs/notes.md)
 ```

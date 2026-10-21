@@ -26,7 +26,7 @@ Commandes :
 - `npm install` : installer les dépendances
 - `powershell -ExecutionPolicy Bypass -File .\tools\get-ffmpeg.ps1` : télécharger ffmpeg et ffprobe dans `src-tauri/binaries/` (obligatoire avant de compiler)
 - `npm run tauri dev` : lancer l'application en mode développement
-- `npm run tauri build` : créer l'installateur (`src-tauri/target/release/bundle/`)
+- `npm run release` : créer les installateurs signés et `latest.json` pour les mises à jour (`src-tauri/target/release/bundle/`) ; demande le mot de passe de la clé privée, rangée hors du projet dans `%USERPROFILE%\.tauri\glyphotrame.key` (voir `docs/notes.md`, « Mises à jour »). `npm run tauri build` seul échoue à l'étape des signatures sans cette clé.
 - `npm test` : tests unitaires (format des projets, chemins, grain animé, taille des exports vidéo) ; `cd src-tauri; cargo test` : tests Rust
 
 ## Architecture cible
@@ -45,6 +45,7 @@ src/
     video.js        vidéo : ouvrir, image courante (source { kind: 'video', path, meta, time }), navigation, lecture, entrée / sortie, raccourcis
     frame.js        vidéo : rendre une image avec des réglages figés (pixels RGBA) ; frame-size.js : dimensions paires
     video-export.js vidéo : export (boucle lire → rendre → écrire, progression, annulation) ; export-options.js : réglages par défaut
+    updater.js      mises à jour automatiques (plugins updater + process) : recherche, téléchargement, installation, redémarrage
   platform/     Tauri : boîtes de dialogue, lecture / écriture de fichiers, glisser-déposer ; paths.js : chemins relatifs ;
                 ffmpeg.js : appels aux commandes Rust de la vidéo ; frame-channel.js (+ worker) : canal WebSocket des pixels de l'export
   engine/       moteur pur JavaScript, sans React, porté depuis la référence
@@ -74,7 +75,7 @@ src/
     controls/       curseur, boutons segmentés, cases, interrupteur, couleur
     panel/          colonne de réglages, une section par bloc, éditeur de courbe
     stage/          aperçu (vues, curseur avant-après), barre et gestes de la plume, barre de lecture vidéo
-    Header, CodeSheet, VideoExport (fenêtre d'export vidéo et progression), Toast
+    Header, CodeSheet, VideoExport (fenêtre d'export vidéo et progression), UpdateDialog (mise à jour disponible), Toast
 src-tauri/      côté Rust : plugins dialog + fs + shell, commandes (lire_image, ffmpeg), configuration de la fenêtre
   src/video.rs    vidéo : infos (ffprobe), image à un instant, sessions de lecture continue (ffmpeg, RGBA brut) ; tests sur de vraies vidéos
   src/export.rs   vidéo : export (ffmpeg décodeur → interface → ffmpeg encodeur, MP4 / ProRes / WebM / PNG / GIF, son) ; tests de la chaîne complète

@@ -47,3 +47,7 @@ tools/.gpu-diff/
 
 # Binaires ffmpeg / ffprobe (sidecars, lourds) : tools/get-ffmpeg.ps1 les télécharge
 src-tauri/binaries/
+
+# clés de signature des mises à jour : jamais dans git (voir docs/notes.md, « Mises à jour »)
+*.key
+*.key.pub

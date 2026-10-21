@@ -49,16 +49,17 @@ export function projectWriter() {
   return (projectPath) => serializeProject({ settings: st, image: imageRecord(src, projectPath), video });
 }
 
-// saveAs : toujours demander où enregistrer
+// saveAs : toujours demander où enregistrer. Rend true si le projet a été enregistré.
 export async function saveProject(saveAs = false) {
   const src = R.getSource();
-  if (!src) return;
+  if (!src) return false;
   const { projectPath, projectName } = session.get();
   const r = await saveProjectFile(saveAs ? null : projectPath, projectName || `${src.slug}.glyphotrame.json`, projectWriter());
   if (r.status === 'saved') { session.set({ projectPath: r.path, projectName: r.name, dirty: false }); toast('Projet enregistré : ' + r.name); }
   else if (r.status === 'downloaded') { session.set({ projectName: r.name, dirty: false }); toast('Téléchargement lancé : ' + r.name); }
   else if (r.status === 'cancelled') toast('Enregistrement annulé.');
   else { console.error(r.error); toast("Le projet n'a pas pu être enregistré : " + (r.error && r.error.message || r.error)); }
+  return r.status === 'saved' || r.status === 'downloaded';
 }
 
 /* ---------- Ouvrir ---------- */

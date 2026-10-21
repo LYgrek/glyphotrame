@@ -8,3 +8,5 @@
 /* groupes d'actions à droite : projet, exports */
 .bar-actions{display:flex;flex-wrap:wrap;align-items:center;justify-content:flex-end;gap:12px 24px}
 .projname{font:12px var(--f-mono);color:var(--muted);max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-right:4px}
+/* version et recherche des mises à jour */
+.appinfo .version{font:12px var(--f-mono);color:var(--muted);font-variant-numeric:tabular-nums;margin-right:2px}

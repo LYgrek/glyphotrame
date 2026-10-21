@@ -27,6 +27,7 @@
   "bundle": {
     "active": true,
     "targets": "all",
+    "createUpdaterArtifacts": true,
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
@@ -47,6 +48,17 @@
         "language": {
           "fr-FR": { "localePath": "wix/fr-FR.wxl" }
         }
+      }
+    }
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "CLE_PUBLIQUE_A_RENSEIGNER",
+      "endpoints": [
+        "https://github.com/LYgrek/glyphotrame-releases/releases/latest/download/latest.json"
+      ],
+      "windows": {
+        "installMode": "passive"
       }
     }
   }

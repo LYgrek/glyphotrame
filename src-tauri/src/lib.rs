@@ -68,6 +68,13 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_shell::init())
+        // mises à jour automatiques (docs/notes.md, « Mises à jour ») ; process : redémarrer après l'installation
+        .plugin(tauri_plugin_process::init())
+        .setup(|app| {
+            #[cfg(desktop)]
+            app.handle().plugin(tauri_plugin_updater::Builder::new().build())?;
+            Ok(())
+        })
         .manage(video::CacheInfos::default())
         .manage(video::Lectures::default())
         .manage(export::Exports::default())

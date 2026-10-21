@@ -287,7 +287,7 @@ async function shots(p) {
   return p.eval(`(() => {
     document.activeElement && document.activeElement.blur && document.activeElement.blur();
     const st = document.createElement('style'); st.id = 'cmp-shot';
-    st.textContent = '.controls{max-height:none!important;overflow:visible!important}*{transition:none!important;caret-color:transparent!important}.bar .project{display:none!important}';
+    st.textContent = '.controls{max-height:none!important;overflow:visible!important}*{transition:none!important;caret-color:transparent!important}.bar .project,.bar .appinfo{display:none!important}';
     document.head.append(st);
     for (const f of document.querySelectorAll('.controls .field')) { const l = f.querySelector('label, .name'); if (l && T.skip.some((s) => T.norm(l.textContent).startsWith(s))) f.style.display = 'none'; }
     window.scrollTo(0, 0);

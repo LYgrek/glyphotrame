@@ -69,6 +69,52 @@ Non couvert (fenêtres natives) : boîtes Ouvrir / Enregistrer de Windows et gli
   Le décodeur seul tient ≈ 1,3 ms par image, l'encodeur x264 n'a jamais fait attendre plus de 4 ms par image. Sur 10 s, ≈ 16 i/s ; sur 30 s, la lecture des pixels et le GPU s'allongent un peu. Essayé puis **retiré** faute de gain mesurable : rendu en deux temps (dessin et lecture des pixels asynchrones, tampon WebGL2 + barrière, grille de l'image suivante calculée pendant le dessin : 60–62 ms au lieu de 59–64), images rendues en RGB pour les sorties opaques (25 % de données en moins : aucun gain), canvas de l'image décodée en mémoire (`willReadFrequently`, profil : `getImageData` du moteur ≈ 18 ms par image) : gain en caractères mais perte en CMJN (la réduction par moitiés se fait sur des canvas accélérés). Le calcul dans un Web Worker n'a pas été tenté : il demanderait de porter les canvas et les polices du moteur dans le worker, sans garantie de résultats identiques. Ce qui reste : le moteur lit l'image par des canvas accélérés (relectures synchrones de la carte graphique) et la lecture des pixels rendus (≈ 8 ms de `readPixels`).
 - **Vérifier** : `cd src-tauri; cargo test` génère de vraies mires (paysage avec son, portrait par rotation) et contrôle infos et pixels. Dans l'application, les vidéos de test : `ffmpeg -f lavfi -i testsrc2=size=640x360:rate=30:duration=2 -f lavfi -i sine=duration=2 -c:v libx264 -pix_fmt yuv420p -c:a aac -shortest mire.mp4`.
 
+## Mises à jour
+
+Plugins Tauri **updater** (vérifier, télécharger, installer) et **process** (redémarrer). Code : `src/state/updater.js` (logique) et `src/ui/UpdateDialog.jsx` (fenêtre) ; configuration : `plugins.updater` et `bundle.createUpdaterArtifacts` dans `src-tauri/tauri.conf.json` ; permissions `updater:default` et `process:allow-restart` (`src-tauri/capabilities/default.json`).
+
+### Fonctionnement
+
+- **Adresse** : `https://github.com/LYgrek/glyphotrame-releases/releases/latest/download/latest.json`. GitHub redirige `latest/download/…` vers le fichier de la release la plus récente (hors brouillons et préversions) : publier une release suffit, l'application n'a rien à changer. Le dépôt `glyphotrame-releases` doit être **public**.
+- **latest.json** donne la version, les notes, la date, et pour chaque plateforme l'adresse de l'installateur et sa signature. L'application ne propose la mise à jour que si la version est plus récente que la sienne, et n'installe le fichier téléchargé que si sa signature correspond à la **clé publique** inscrite dans `tauri.conf.json`. Personne ne peut donc diffuser une fausse mise à jour sans la clé privée.
+- **Au démarrage** (4 s après, pour ne pas ralentir l'ouverture) : recherche discrète. Hors ligne, adresse injoignable ou fichier absent : aucun message (simple ligne dans la console). Pas de recherche automatique en développement (`npm run tauri dev`, bancs de comparaison) ; le bouton marche quand même.
+- **En-tête** : numéro de version (lu dans `tauri.conf.json` par `getVersion()`) et bouton « Rechercher les mises à jour », qui affiche toujours un résultat (« Glyphotrame X.Y.Z est à jour », ou « Impossible de rechercher les mises à jour… »). Dans un navigateur (`npm run dev`) : message « disponibles seulement dans l'application installée ». Le groupe est masqué dans les captures de `compare:ui` (absent de la référence).
+- **Fenêtre** « Glyphotrame X.Y.Z est disponible » : notes de version (texte simple), « Plus tard » (la fenêtre revient au prochain démarrage) ou « Installer maintenant ».
+  - Projet modifié (•) : la fenêtre demande d'abord « Enregistrer », « Ne pas enregistrer » ou « Annuler ». Si l'enregistrement est annulé ou échoue, on reste sur la question.
+  - Export vidéo en cours : installation refusée avec un message (l'export serait coupé).
+  - Téléchargement avec barre de progression (Mo reçus / total), puis installation. **Windows** : l'installateur NSIS est lancé en mode passif (`windows.installMode: "passive"`, petite fenêtre de progression, aucune question), il ferme Glyphotrame, met à jour les fichiers et relance l'application. **macOS / Linux** : `relaunch()` du plugin process.
+  - Erreur (réseau coupé, signature refusée…) : message dans la fenêtre, « Réessayer » ou « Fermer ».
+- Une installation faite avec le **MSI** est mise à jour par le MSI (clé `windows-x86_64-msi` de latest.json), une installation NSIS par le `.exe` (clé `windows-x86_64`).
+
+### Clé de signature
+
+- **Clé privée** : `%USERPROFILE%\.tauri\glyphotrame.key` (par exemple `C:\Users\joier\.tauri\glyphotrame.key`), protégée par un mot de passe. **Jamais dans le projet ni dans git.** La clé publique (`glyphotrame.key.pub`, à côté) est recopiée dans `plugins.updater.pubkey` ; elle n'est pas secrète.
+- Créée une fois par :
+  ```powershell
+  npx tauri signer generate -w "$env:USERPROFILE\.tauri\glyphotrame.key"
+  ```
+  (le mot de passe est demandé dans le terminal).
+- **À sauvegarder absolument.** Chaque application installée ne fait confiance qu'à cette clé-là. Si la clé privée **ou son mot de passe** sont perdus, il n'est plus possible de publier une mise à jour que les copies déjà installées accepteront : chaque utilisateur devrait désinstaller puis réinstaller une nouvelle version à la main (avec une nouvelle clé). Si la clé est volée, quelqu'un d'autre peut signer des mises à jour (le mot de passe protège encore, d'où son importance).
+  - Copier `glyphotrame.key` dans **deux endroits distincts hors de l'ordinateur** : par exemple un gestionnaire de mots de passe (Bitwarden, 1Password, KeePass : pièce jointe ou note sécurisée) et une clé USB rangée à part.
+  - Garder le **mot de passe** dans le gestionnaire de mots de passe, pas dans le même fichier que la clé sur la clé USB.
+  - Le contenu de la clé est une seule ligne de texte : on peut aussi l'imprimer et la ranger avec ses papiers.
+  - Pour GitHub Actions (phase 5) : secrets `TAURI_SIGNING_PRIVATE_KEY` (contenu du fichier) et `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` du dépôt, jamais dans un fichier versionné.
+- Sans la clé, `npm run tauri build` crée bien les installateurs mais s'arrête en erreur à l'étape des signatures (`createUpdaterArtifacts`) : utiliser `npm run release`.
+
+### Publier une version
+
+1. Monter la version dans `package.json`, `src-tauri/tauri.conf.json`, `src-tauri/Cargo.toml` et `APP_VERSION` (`src/state/project-format.js`) ; `npm test` vérifie qu'elles sont identiques.
+2. Écrire les notes dans `docs/versions.md`, section `## X.Y.Z` (texte simple, affiché tel quel dans la fenêtre).
+3. `npm run release` (= `tools/build-release.ps1`) : demande le mot de passe de la clé (jamais écrit sur le disque), construit les installateurs et leurs signatures (`.sig`), puis crée `src-tauri/target/release/bundle/latest.json` (`tools/latest-json.mjs`).
+4. Sur GitHub, dans `LYgrek/glyphotrame-releases` : nouvelle release avec le tag **`vX.Y.Z`** (le `v` compte : les adresses de latest.json le contiennent), joindre `Glyphotrame_X.Y.Z_x64-setup.exe`, `Glyphotrame_X.Y.Z_x64_fr-FR.msi` et `latest.json`, publier (pas en brouillon ni en préversion).
+5. Vérifier : `https://github.com/LYgrek/glyphotrame-releases/releases/latest/download/latest.json` doit renvoyer le nouveau fichier ; une copie installée de la version précédente propose la mise à jour au démarrage.
+
+### Tester une mise à jour
+
+- Vrai parcours : installer la 1.0.0 avec le `.exe` NSIS, puis publier une 1.0.1 comme ci-dessus. Au démarrage, la 1.0.0 propose la mise à jour, la télécharge, l'installe et redémarre en 1.0.1.
+- Sans toucher au dépôt public : construire une copie d'essai dont `plugins.updater.endpoints` pointe vers un serveur local (`http://127.0.0.1:…/latest.json`, avec `"dangerousInsecureTransportProtocol": true` : sinon l'updater refuse tout ce qui n'est pas en HTTPS), puis servir le `latest.json` et l'installateur d'une version plus récente signée avec la même clé. Ne jamais publier une version construite avec cette option.
+- La fenêtre seule se vérifie dans `npm run dev` en remplissant `session.update` depuis la console : `{ phase: 'available' | 'save' | 'download' | 'error', version, notes, received, total, msg }`.
+
 ## Projets (phase 3)
 
 Fichier `.json` (proposé : `<image>.glyphotrame.json`) : `format`, `version` (2), `application`, `image`, `video` (vidéo seulement), `reglages` (l'objet `settings`, même forme que `state` dans la référence). Format et lecture : `src/state/project-format.js` (fonctions pures, testées par `npm test`) ; actions : `src/state/project.js`.

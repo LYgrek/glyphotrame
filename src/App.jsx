@@ -6,11 +6,13 @@ import { openProject, saveProject } from './state/project.js';
 import { onVideoKey } from './state/video.js';
 import { onFileDrop } from './platform/files.js';
 import { ffmpegVersion } from './platform/ffmpeg.js';
+import { loadAppVersion, checkForUpdates } from './state/updater.js';
 import Header from './ui/Header.jsx';
 import Controls from './ui/panel/Controls.jsx';
 import Stage from './ui/stage/Stage.jsx';
 import CodeSheet from './ui/CodeSheet.jsx';
 import VideoExport from './ui/VideoExport.jsx';
+import UpdateDialog from './ui/UpdateDialog.jsx';
 import Toast from './ui/Toast.jsx';
 import './App.css';
 
@@ -18,6 +20,10 @@ export default function App() {
   useEffect(() => {
     start();
     // vidéo (étape 0) : ffmpeg embarqué, version affichée dans la console
+    // mises à jour : version installée, puis recherche discrète quelques secondes après le démarrage
+    // (pas en développement : npm run tauri dev, bancs de comparaison)
+    loadAppVersion();
+    const updTimer = import.meta.env.DEV ? 0 : setTimeout(() => checkForUpdates(), 4000);
     ffmpegVersion().then((v) => { if (v) console.info('ffmpeg embarqué :\n' + v); }).catch((e) => console.warn('ffmpeg indisponible :', e));
     // coller une image (Ctrl+V), sauf dans le champ des caractères
     const onPaste = (e) => {
@@ -43,7 +49,7 @@ export default function App() {
       leave: () => session.set({ dragOver: false }),
       drop: (file, error) => { if (error) toast('Impossible de lire ce fichier.'); else loadMedia(file); }
     });
-    return () => { window.removeEventListener('paste', onPaste); window.removeEventListener('keydown', onKey); window.removeEventListener('keydown', onVideoKey); stopDrop(); };
+    return () => { clearTimeout(updTimer); window.removeEventListener('paste', onPaste); window.removeEventListener('keydown', onKey); window.removeEventListener('keydown', onVideoKey); stopDrop(); };
   }, []);
 
   return (
@@ -57,6 +63,7 @@ export default function App() {
       </div>
       <CodeSheet />
       <VideoExport />
+      <UpdateDialog />
       <Toast />
     </>
   );

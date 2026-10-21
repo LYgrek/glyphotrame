@@ -81,10 +81,10 @@ Pour la suite (projets sauvegardés, vidéo, distribution sur Mac), les phases 3
 ## Créer l'installateur
 
 ```powershell
-npm run tauri build
+npm run release
 ```
 
-Le fichier `.msi` et le `.exe` d'installation se trouvent dans `src-tauri\target\release\bundle\`.
+Le mot de passe de la clé de signature des mises à jour est demandé (clé rangée dans `C:\Users\<toi>\.tauri\glyphotrame.key`, voir `docs/notes.md`, « Mises à jour »). Le `.exe` d'installation (installateur principal), le `.msi`, leurs signatures `.sig` et `latest.json` se trouvent dans `src-tauri\target\release\bundle\`.
 
 ## Bons réflexes
 

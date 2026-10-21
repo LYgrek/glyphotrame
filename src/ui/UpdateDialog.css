@@ -1,0 +1,8 @@
+/* Fenêtre « Mise à jour disponible » (même carte que la fenêtre Code) */
+.update-card{width:min(540px,100%);overflow:auto}
+.upd-notes{max-height:min(260px,40vh);overflow:auto;padding:12px;border:1px solid var(--line);border-radius:8px;background:var(--paper);font-size:13px;line-height:1.5;white-space:pre-line;overflow-wrap:anywhere}
+.upd-question{margin:0;font-size:14px;line-height:1.5}
+.upd-error{margin:0;font-size:13px;line-height:1.5;color:#b4531a;overflow-wrap:anywhere}
+.upd-progress{display:flex;flex-direction:column;gap:8px}
+.upd-progress progress{width:100%;height:6px;accent-color:var(--accent)}
+.upd-progress .hint{margin:0;font-family:var(--f-mono);font-variant-numeric:tabular-nums}

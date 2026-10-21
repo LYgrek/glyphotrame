@@ -4,6 +4,7 @@
 import { createStore, useStore } from './store.js';
 import { defaultSettings } from './defaults.js';
 import { defaultExportOptions } from './export-options.js';
+import { APP_VERSION } from './project-format.js';
 
 export const settings = createStore(defaultSettings());
 export const session = createStore({
@@ -30,7 +31,9 @@ export const session = createStore({
   // rendu de l'aperçu et des exports PNG / JPEG : carte graphique (WebGL2) ou canvas 2D
   // (?rendu=canvas dans l'adresse force le canvas 2D, utilisé par le banc compare:ui)
   rendu: typeof location !== 'undefined' && new URLSearchParams(location.search).get('rendu') === 'canvas' ? 'canvas' : 'gpu',
-  gpuOk: null           // null : pas encore essayé ; false : WebGL2 indisponible
+  gpuOk: null,          // null : pas encore essayé ; false : WebGL2 indisponible
+  // mises à jour (state/updater.js) : version installée, recherche à la demande en cours, fenêtre de mise à jour
+  appVersion: APP_VERSION, updateChecking: false, update: null
 });
 
 export const useSetting = (k) => useStore(settings, (s) => s[k]);

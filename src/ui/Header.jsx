@@ -2,6 +2,7 @@ import { exportRaster, exportSVG, openSheet } from '../state/actions.js';
 import { openProject, saveProject } from '../state/project.js';
 import { useSession } from '../state/index.js';
 import { openVideoExport } from '../state/video-export.js';
+import { checkForUpdates } from '../state/updater.js';
 import './Header.css';
 
 const MARK = ['@', '%', ':', '#', '+', '.', '=', '-', ' '];
@@ -15,6 +16,17 @@ function ProjectGroup() {
       <span className="projname" title={path || name || ''}>{(name || 'Sans titre').replace(/\.glyphotrame\.json$|\.json$/, '')}{dirty ? ' •' : ''}</span>
       <button className="btn" type="button" onClick={openProject} title="Ouvrir un projet (Ctrl+O)">Ouvrir…</button>
       <button className="btn" type="button" onClick={(e) => saveProject(e.shiftKey)} title="Enregistrer le projet (Ctrl+S) · Maj+clic ou Ctrl+Maj+S : enregistrer sous">Enregistrer</button>
+    </div>
+  );
+}
+
+// Application : numéro de version, recherche des mises à jour (state/updater.js)
+function AppGroup() {
+  const version = useSession('appVersion'), busy = useSession('updateChecking');
+  return (
+    <div className="exports appinfo" role="group" aria-label="Application">
+      <span className="version" title="Version de Glyphotrame">v{version}</span>
+      <button className="btn" type="button" disabled={busy} onClick={() => checkForUpdates({ manual: true })}>{busy ? 'Recherche…' : 'Rechercher les mises à jour'}</button>
     </div>
   );
 }
@@ -40,6 +52,7 @@ export default function Header() {
           {video && <button className="btn" type="button" onClick={openVideoExport} title="Exporter toute la vidéo avec l'effet (les autres exports portent sur l'image courante)">Vidéo…</button>}
           <button className="btn primary" id="exCode" type="button" onClick={openSheet}>&lt;/&gt; Code</button>
         </div>
+        <AppGroup />
       </div>
     </header>
   );
