@@ -53,7 +53,7 @@
   },
   "plugins": {
     "updater": {
-      "pubkey": "CLE_PUBLIQUE_A_RENSEIGNER",
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDQxQjMxMTAwRjBGNjEyOEUKUldTT0V2YndBQkd6UWZMK25WQTh5d0FoSjNqbmlsOWRPengxSVo4S2JMRjZIV1VKbHkxcHVQK1cK",
       "endpoints": [
         "https://github.com/LYgrek/glyphotrame-releases/releases/latest/download/latest.json"
       ],
