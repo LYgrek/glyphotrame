@@ -1,7 +1,7 @@
 /* Format des fichiers de projet (.json) : réglages + image (ou vidéo). Fonctions pures (testées par npm test).
 
    {
-     "format": "glyphotrame-projet", "version": 2, "application": "0.1.0",
+     "format": "glyphotrame-projet", "version": 2, "application": "1.0.0",
      "image": { "nom", "chemin", "relatif" } | { "nom", "video": true, "chemin", "relatif" }
             | { "nom", "donnees": "data:image/…" } | { "exemple": true },
      "video": { "instant", "entree", "sortie" (secondes), "export": { format, taille, cadence, plage, son, qualite } },
@@ -16,7 +16,7 @@ import { mergeExportOptions } from './export-options.js';
 
 export const PROJECT_FORMAT = 'glyphotrame-projet';
 export const PROJECT_VERSION = 2;
-export const APP_VERSION = '0.1.0';
+export const APP_VERSION = '1.0.0';
 
 // video : { instant, entree, sortie, export } pour une vidéo, sinon absent
 export function serializeProject({ settings, image, video = null }) {

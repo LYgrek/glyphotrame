@@ -119,3 +119,10 @@ Vérifié par `npm run compare:gpu` (46 réglages types, GPU ↔ canvas 2D) et `
 - [x] Étape 6 · Performances : temps par image mesuré (décodage, image, calcul, GPU, pixels, écriture ; attente de ffmpeg mesurée côté Rust) et affiché pendant l'export ; banc `npm run measure:video` (1080p, 30 s). Le temps se perdait dans l'IPC de Tauri (≈ 85 %) : pixels désormais par un WebSocket local (127.0.0.1, jeton aléatoire, origine vérifiée) tenu par un worker, IPC en secours — *1080p : 3,6 → 13,3 i/s en caractères, 3,4 → 13,2 i/s en CMJN (release) ; `compare:video` : séquences toujours identiques au pixel près, par le canal et par l'IPC*
 - [x] Étape 7 · Vérifications : banc `npm run compare:video` dans la vraie fenêtre Tauri (65 vérifications) — séquences PNG identiques à l'export PNG de l'application pour 6 réglages types × 60 images, exports MP4 / MOV / WebM / GIF contrôlés par ffprobe (durée, cadence, nombre d'images, dimensions, son, canal alpha), projet vidéo rouvert à la même image
 - [ ] Cas à tester à la main : vidéo verticale de téléphone (rotation), vidéo sans son, cadence variable, 4K, vidéo longue (mémoire stable), annulation en cours d'export, fichier illisible
+
+## Distribution (phase 5)
+
+- [x] Icône définitive (point noir sur fond blanc, `src-tauri/icons/source/`) : icônes Windows / macOS générées par `npx tauri icon`, favicon `public/favicon.svg`
+- [x] Version 1.0.0 (package.json, tauri.conf.json, Cargo.toml, champ `application` des projets)
+- [x] Installateurs en français : NSIS (`.exe`, installateur principal, sans droits administrateur) et MSI (`fr-FR`), ffmpeg et ffprobe inclus
+- [ ] GitHub Actions (`tauri-action`) : Windows et macOS (version universelle)

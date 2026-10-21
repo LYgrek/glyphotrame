@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Textes propres à Tauri dans l'installateur MSI, traduits en français (les boîtes standard de WiX le sont déjà).
+     Les textes absents de ce fichier sont repris en anglais par Tauri. -->
+<WixLocalization Culture="fr-fr" xmlns="http://schemas.microsoft.com/wix/2006/localization">
+  <String Id="LaunchApp">Lancer Glyphotrame</String>
+  <String Id="DowngradeErrorMessage">Une version plus récente de Glyphotrame est déjà installée.</String>
+  <String Id="PathEnvVarFeature">Ajoute le dossier d'installation de Glyphotrame à la variable d'environnement PATH, pour pouvoir lancer Glyphotrame depuis n'importe quel dossier.</String>
+  <String Id="InstallAppFeature">Installe Glyphotrame.</String>
+</WixLocalization>
